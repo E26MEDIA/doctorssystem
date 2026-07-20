@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+:root {
+  --mist: #f4f7fc;
+  --paper: #ffffff;
+  --ink: #0a1b33;
+  --ink-soft: #3a4f6b;
+  --muted: #6b7c93;
+  --teal: #12b886;
+  --teal-deep: #0e9a70;
+  --forest: #071526;
+  --brass: #22c55e;
+  --line: #d5deeb;
+  --glow: rgba(18, 184, 134, 0.16);
+  --navy: #0a1b33;
+  --navy-mid: #122a4a;
+  --background: var(--mist);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 70% 45% at 0% 0%, rgba(18, 184, 134, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 5%, rgba(10, 27, 51, 0.08), transparent 50%),
+    linear-gradient(180deg, #f4f7fc 0%, #ffffff 42%, #eef3f9 100%);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--teal) 32%, white);
+  color: var(--ink);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #ffffff;
+  padding: 0.9rem 1.5rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 12px 32px rgba(7, 21, 38, 0.22);
+}
+
+.btn-primary:hover {
+  background: var(--teal);
+  box-shadow: 0 12px 32px rgba(18, 184, 134, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--navy) 18%, transparent);
+  color: var(--ink);
+  padding: 0.9rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.btn-ghost:hover {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.field span {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes heroRise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes softZoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeLine {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.hero-copy > * {
+  animation: heroRise 0.9s ease both;
+}
+
+.hero-copy > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.hero-copy > *:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.hero-copy > *:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.hero-copy > *:nth-child(4) {
+  animation-delay: 0.42s;
+}
+
+.hero-media {
+  animation: softZoom 1.4s ease both;
+}
+
+.accent-line {
+  transform-origin: left;
+  animation: fadeLine 0.9s ease 0.35s both;
+}
+
+.section-pad {
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+
+.display {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.prose-clinic p + p {
+  margin-top: 1rem;
+}

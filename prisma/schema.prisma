@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  date      String
+  time      String
+  service   String
+  notes     String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ClinicSettings {
+  id               String   @id @default("default")
+  clinicName       String
+  doctorName       String
+  credentials      String
+  tagline          String
+  phone            String
+  email            String
+  addressLine1     String
+  addressLine2     String
+  instagram        String   @default("")
+  linkedin         String   @default("")
+  hoursJson        String
+  timeSlotsJson    String
+  bookingEnabled   Boolean  @default(true)
+  minLeadDays      Int      @default(1)
+  maxAdvanceDays   Int      @default(60)
+  autoConfirm      Boolean  @default(false)
+  confirmationNote String   @default("We will confirm your appointment within one business day.")
+  notifyEmail      String   @default("")
+  notifyOnBooking  Boolean  @default(true)
+  notifyOnContact  Boolean  @default(true)
+  emergencyNote    String   @default("Not for emergencies — call local emergency services if needed.")
+  updatedAt        DateTime @updatedAt
+}
+
+model ServiceOffering {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  summary   String
+  details   String
+  duration  String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlockedDate {
+  id        String   @id @default(cuid())
+  date      String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model AdminAccount {
+  id           String   @id @default("admin")
+  passwordHash String?
+  updatedAt    DateTime @updatedAt
+}
