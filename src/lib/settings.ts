@@ -192,30 +192,41 @@ export function rowToConfig(
   };
 }
 
+/** Short in-process cache so layout + pages don't upsert SQLite on every hit. */
+const CACHE_TTL_MS = process.env.NODE_ENV === "production" ? 30_000 : 5_000;
+
+type CacheEntry<T> = { value: T; expires: number };
+
+let clinicCache: CacheEntry<ClinicConfig> | null = null;
+let servicesCache: CacheEntry<ServiceItem[]> | null = null;
+
+export function invalidateSettingsCache() {
+  clinicCache = null;
+  servicesCache = null;
+}
+
 export async function getClinicConfig(): Promise<ClinicConfig> {
+  const now = Date.now();
+  if (clinicCache && clinicCache.expires > now) {
+    return clinicCache.value;
+  }
   const row = await ensureClinicSettings();
-  return rowToConfig(row);
+  const value = rowToConfig(row);
+  clinicCache = { value, expires: now + CACHE_TTL_MS };
+  return value;
 }
 
-export async function getActiveServices(): Promise<ServiceItem[]> {
-  const rows = await ensureServices();
-  return rows
-    .filter((s) => s.active)
-    .map((s) => ({
-      id: s.id,
-      slug: s.slug,
-      title: s.title,
-      summary: s.summary,
-      details: s.details,
-      duration: s.duration,
-      active: s.active,
-      sortOrder: s.sortOrder,
-    }));
-}
-
-export async function getAllServices(): Promise<ServiceItem[]> {
-  const rows = await ensureServices();
-  return rows.map((s) => ({
+function mapService(s: {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  details: string;
+  duration: string;
+  active: boolean;
+  sortOrder: number;
+}): ServiceItem {
+  return {
     id: s.id,
     slug: s.slug,
     title: s.title,
@@ -224,7 +235,27 @@ export async function getAllServices(): Promise<ServiceItem[]> {
     duration: s.duration,
     active: s.active,
     sortOrder: s.sortOrder,
-  }));
+  };
+}
+
+async function loadAllServices(): Promise<ServiceItem[]> {
+  const now = Date.now();
+  if (servicesCache && servicesCache.expires > now) {
+    return servicesCache.value;
+  }
+  const rows = await ensureServices();
+  const value = rows.map(mapService);
+  servicesCache = { value, expires: now + CACHE_TTL_MS };
+  return value;
+}
+
+export async function getActiveServices(): Promise<ServiceItem[]> {
+  const rows = await loadAllServices();
+  return rows.filter((s) => s.active);
+}
+
+export async function getAllServices(): Promise<ServiceItem[]> {
+  return loadAllServices();
 }
 
 export async function getBlockedDates() {
