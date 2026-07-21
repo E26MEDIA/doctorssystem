@@ -15,7 +15,7 @@ export default async function HomePage() {
       <section className="relative min-h-[100svh] overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=2400&q=80"
+            src="/images/hero.jpg"
             alt="Calm clinical consultation space with natural light"
             fill
             priority
@@ -157,7 +157,7 @@ export default async function HomePage() {
           <Reveal>
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=1200&q=80"
+                src="/images/doctor.jpg"
                 alt={`${clinic.doctor} in clinical setting`}
                 fill
                 className="object-cover"

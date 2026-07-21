@@ -7,6 +7,7 @@ import {
   ensureClinicSettings,
   getAllServices,
   getBlockedDates,
+  invalidateSettingsCache,
   rowToConfig,
 } from "@/lib/settings";
 import {
@@ -141,6 +142,7 @@ export async function PUT(request: Request) {
       },
     });
 
+    invalidateSettingsCache();
     return NextResponse.json({ ok: true, settings: rowToConfig(row) });
   } catch {
     return NextResponse.json(

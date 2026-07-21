@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateSettingsCache } from "@/lib/settings";
 import {
   assertSameOrigin,
   forbiddenOrigin,
@@ -49,6 +50,7 @@ export async function PUT(request: Request, { params }: Params) {
       where: { id },
       data: parsed.data,
     });
+    invalidateSettingsCache();
     return NextResponse.json({ ok: true, service });
   } catch {
     return NextResponse.json({ error: "Update failed" }, { status: 404 });
@@ -68,6 +70,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   try {
     await prisma.serviceOffering.delete({ where: { id } });
+    invalidateSettingsCache();
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Delete failed" }, { status: 404 });

@@ -32,7 +32,7 @@ export default async function AboutPage() {
         <Reveal>
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
-              src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=1200&q=80"
+              src="/images/about.jpg"
               alt={clinic.doctor}
               fill
               className="object-cover"
