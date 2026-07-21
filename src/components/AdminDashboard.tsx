@@ -166,21 +166,31 @@ export function AdminDashboard() {
   const [securityMsg, setSecurityMsg] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/data");
-    if (res.status === 401) {
+    try {
+      const res = await fetch("/api/admin/data");
+      if (res.status === 401) {
+        setAuthed(false);
+        return;
+      }
+      if (!res.ok) {
+        setAuthed(false);
+        setError("Unable to load admin session. Please try again.");
+        return;
+      }
+      const data = await res.json();
+      setAppointments(data.appointments ?? []);
+      setMessages(data.messages ?? []);
+      setSettings(data.settings ?? emptySettings());
+      setSlotsText((data.settings?.timeSlots ?? []).join("\n"));
+      setServices(data.services ?? []);
+      setBlockedDates(data.blockedDates ?? []);
+      setAuthed(true);
+    } catch {
       setAuthed(false);
+      setError("Unable to reach the admin API. Please refresh.");
+    } finally {
       setChecking(false);
-      return;
     }
-    const data = await res.json();
-    setAppointments(data.appointments ?? []);
-    setMessages(data.messages ?? []);
-    setSettings(data.settings ?? emptySettings());
-    setSlotsText((data.settings?.timeSlots ?? []).join("\n"));
-    setServices(data.services ?? []);
-    setBlockedDates(data.blockedDates ?? []);
-    setAuthed(true);
-    setChecking(false);
   }, []);
 
   useEffect(() => {

@@ -10,8 +10,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Avoid noisy middleware deprecation path issues in local preview.
   poweredByHeader: false,
+  // Allow IDE / tunnel hosts to load Next.js dev assets (HMR, etc.)
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "*.trycloudflare.com",
+    "*.loca.lt",
+  ],
 };
 
 export default nextConfig;
