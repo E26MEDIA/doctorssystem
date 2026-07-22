@@ -22,7 +22,7 @@ services:
       - key: ADMIN_PASSWORD
         value: Demo@12345
       - key: ADMIN_SECRET
-        value: meridian-health-prod-secret-change-me-32chars-min
+        value: meridian-health-prod-secret-xk9m2p7q4w8n5r1t6y3u0v2b
       - key: NEXT_PUBLIC_CLINIC_NAME
         value: Meridian Health
       - key: NEXT_PUBLIC_DOCTOR_NAME

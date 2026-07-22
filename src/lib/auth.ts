@@ -34,7 +34,8 @@ function getSecret() {
     isProduction() &&
     (secret === "change-this-session-secret" ||
       secret === "dev-secret" ||
-      secret.includes("change"))
+      secret === "replace-with-a-long-random-secret-at-least-32-chars" ||
+      /^change[-_]?me/i.test(secret))
   ) {
     throw new Error("ADMIN_SECRET must be changed from the example value");
   }
