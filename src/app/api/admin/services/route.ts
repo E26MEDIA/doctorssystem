@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureServices } from "@/lib/settings";
+import { ensureServices, invalidateSettingsCache } from "@/lib/settings";
 import {
   assertSameOrigin,
   forbiddenOrigin,
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
 
   try {
     const service = await prisma.serviceOffering.create({ data: parsed.data });
+    invalidateSettingsCache();
     return NextResponse.json({ ok: true, service });
   } catch {
     return NextResponse.json(
