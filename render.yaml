@@ -6,7 +6,8 @@ services:
     region: oregon
     branch: cursor/client-demo-hosting-437b
     autoDeploy: true
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --skip-generate && npx next build
+    # --include=dev is required: NODE_ENV=production would skip Tailwind/TypeScript and break next build
+    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma db push --skip-generate && npx next build
     startCommand: npx next start --hostname 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
@@ -14,6 +15,8 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22.14.0"
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: DATABASE_URL
         value: file:./prod.db
       - key: ADMIN_PASSWORD
