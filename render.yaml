@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    branch: cursor/client-demo-hosting-437b
+    branch: main
     autoDeploy: true
     buildCommand: npm ci && npx prisma generate && npx prisma db push --skip-generate && npx next build
     startCommand: npx next start --hostname 0.0.0.0 --port $PORT
