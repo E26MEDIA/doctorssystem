@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: meridian-health
+    runtime: node
+    plan: free
+    region: oregon
+    # Deploy from this branch until merged to main
+    branch: main
+    buildCommand: npm ci && npx prisma generate && npx prisma db push --skip-generate && npm run build
+    startCommand: npx next start --hostname 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./prod.db
+      - key: ADMIN_PASSWORD
+        value: Demo@12345
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_CLINIC_NAME
+        value: Meridian Health
+      - key: NEXT_PUBLIC_DOCTOR_NAME
+        value: Dr. Anika Rao
