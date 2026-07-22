@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: meridian-health
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./data/prod.db
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_CLINIC_NAME
+        value: Meridian Health
+      - key: NEXT_PUBLIC_DOCTOR_NAME
+        value: Dr. Anika Rao
+    disk:
+      name: meridian-data
+      mountPath: /app/data
+      sizeGB: 1
