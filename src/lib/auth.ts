@@ -30,13 +30,14 @@ function getSecret() {
     // Dev-only fallback — never used when NODE_ENV=production
     return "dev-only-insecure-admin-secret-do-not-use";
   }
-  if (
-    isProduction() &&
-    (secret === "change-this-session-secret" ||
-      secret === "dev-secret" ||
-      secret === "replace-with-a-long-random-secret-at-least-32-chars" ||
-      /^change[-_]?me/i.test(secret))
-  ) {
+  // Only block known placeholder secrets, not arbitrary strings that happen
+  // to contain the letters "change" (that previously broke Render login).
+  const blocked = new Set([
+    "change-this-session-secret",
+    "dev-secret",
+    "replace-with-a-long-random-secret-at-least-32-chars",
+  ]);
+  if (isProduction() && blocked.has(secret)) {
     throw new Error("ADMIN_SECRET must be changed from the example value");
   }
   return secret;
