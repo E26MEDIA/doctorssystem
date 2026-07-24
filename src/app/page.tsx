@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Reveal } from "@/components/Reveal";
+import { AppointmentForm } from "@/components/AppointmentForm";
+import { GallerySection } from "@/components/GallerySection";
 import { doctorProfile, testimonials } from "@/lib/clinic";
 import { getActiveServices, getClinicConfig } from "@/lib/settings";
 
@@ -46,16 +47,16 @@ export default async function HomePage() {
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
-                href="/book"
+                href="/gallery"
                 className="btn-primary !bg-[var(--teal-bright)] !text-[var(--deep)] !shadow-[0_12px_32px_rgba(20,184,166,0.35)] hover:!bg-white"
               >
-                Book consultation
+                View gallery
               </Link>
               <Link
-                href="/about"
+                href="/#book"
                 className="btn-ghost !border-white/35 !text-white hover:!border-[var(--teal-bright)] hover:!bg-white/10 hover:!text-white"
               >
-                About {doctorProfile.shortName}
+                Book consultation
               </Link>
             </div>
           </div>
@@ -64,26 +65,92 @@ export default async function HomePage() {
 
       <section className="section-pad">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
-          <Reveal>
-            <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-end">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
-                  How to consult
-                </p>
-                <h2 className="display mt-3 text-4xl text-[var(--ink)] md:text-5xl">
-                  Clinic visit or virtual Meet — your choice.
-                </h2>
-                <div className="accent-line mt-5 h-0.5 w-24 bg-[var(--teal-bright)]" />
-              </div>
-              <p className="text-lg leading-relaxed text-[var(--ink-soft)]">
-                Pick an open slot from the doctor’s weekly schedule. Available
-                slots confirm instantly — no waiting for approval. Virtual
-                visits include a Google Meet link by email.
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+                Gallery
               </p>
+              <h2 className="display mt-3 text-4xl text-[var(--ink)] md:text-5xl">
+                Photos & Instagram reels
+              </h2>
             </div>
-          </Reveal>
+            <Link
+              href="/gallery"
+              className="text-sm font-medium text-[var(--teal)] underline-offset-4 hover:underline"
+            >
+              Full gallery →
+            </Link>
+          </div>
+          <GallerySection limitPhotos={6} compact showReels />
+        </div>
+      </section>
 
-          <div className="mt-14 grid gap-8 md:grid-cols-2">
+      <section className="section-pad bg-[var(--deep)] text-white">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal-bright)]">
+                Expertise
+              </p>
+              <h2 className="display mt-3 text-4xl md:text-5xl">
+                Areas of surgical focus
+              </h2>
+            </div>
+            <Link
+              href="/services"
+              className="text-sm text-[var(--teal-bright)] underline-offset-4 hover:underline"
+            >
+              View all services →
+            </Link>
+          </div>
+
+          <div className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
+            {doctorProfile.expertise.slice(0, 6).map((item) => (
+              <div
+                key={item}
+                className="border-l-2 border-[var(--teal-bright)]/40 pl-5"
+              >
+                <p className="text-lg text-white/90">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section-pad">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center md:px-8">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
+            <Image
+              src="/images/doctor.jpg"
+              alt={clinic.doctor}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+              Physician
+            </p>
+            <h2 className="display mt-3 text-4xl md:text-5xl">{clinic.doctor}</h2>
+            <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
+            <p className="mt-6 text-lg leading-relaxed text-[var(--ink-soft)]">
+              {doctorProfile.bio[0]}
+            </p>
+            <Link href="/about" className="btn-ghost mt-8">
+              Education & experience
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-pad border-y border-[var(--line)] bg-white/50">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <h2 className="display text-4xl md:text-5xl">How to consult</h2>
+          <p className="mt-4 max-w-2xl text-lg text-[var(--ink-soft)]">
+            Clinic visit or virtual Meet. Open slots confirm instantly.
+          </p>
+          <div className="mt-10 grid gap-8 md:grid-cols-2">
             {(consultServices.length
               ? consultServices
               : [
@@ -102,137 +169,78 @@ export default async function HomePage() {
                     duration: "20–30 min",
                   },
                 ]
-            ).map((item, i) => (
-              <Reveal key={item.slug} delay={i * 100}>
-                <article className="relative overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-8">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--teal)]">
-                    {item.duration}
-                  </p>
-                  <h3 className="display mt-3 text-3xl text-[var(--deep)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-4 text-[var(--ink-soft)] leading-relaxed">
-                    {item.summary}
-                  </p>
-                  <Link href="/book" className="btn-primary mt-8">
-                    Book this visit
-                  </Link>
-                </article>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section-pad bg-[var(--deep)] text-white">
-        <div className="mx-auto max-w-6xl px-5 md:px-8">
-          <Reveal>
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal-bright)]">
-                  Expertise
-                </p>
-                <h2 className="display mt-3 text-4xl md:text-5xl">
-                  Areas of surgical focus
-                </h2>
-              </div>
-              <Link
-                href="/services"
-                className="text-sm text-[var(--teal-bright)] underline-offset-4 hover:underline"
+            ).map((item) => (
+              <article
+                key={item.slug}
+                className="rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-8"
               >
-                View all services →
-              </Link>
-            </div>
-          </Reveal>
-
-          <div className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
-            {doctorProfile.expertise.slice(0, 6).map((item, i) => (
-              <Reveal key={item} delay={i * 60}>
-                <div className="border-l-2 border-[var(--teal-bright)]/40 pl-5">
-                  <p className="text-lg text-white/90">{item}</p>
-                </div>
-              </Reveal>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--teal)]">
+                  {item.duration}
+                </p>
+                <h3 className="display mt-3 text-3xl text-[var(--deep)]">
+                  {item.title}
+                </h3>
+                <p className="mt-4 leading-relaxed text-[var(--ink-soft)]">
+                  {item.summary}
+                </p>
+                <Link href="/#book" className="btn-primary mt-8">
+                  Book this visit
+                </Link>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section-pad">
-        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center md:px-8">
-          <Reveal>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
-              <Image
-                src="/images/doctor.jpg"
-                alt={clinic.doctor}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-            </div>
-          </Reveal>
-          <Reveal delay={120}>
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
-                Physician
-              </p>
-              <h2 className="display mt-3 text-4xl md:text-5xl">
-                {clinic.doctor}
-              </h2>
-              <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
-              <p className="mt-6 text-lg leading-relaxed text-[var(--ink-soft)]">
-                {doctorProfile.bio[0]}
-              </p>
-              <Link href="/about" className="btn-ghost mt-8">
-                Education & experience
-              </Link>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="section-pad border-y border-[var(--line)] bg-white/50">
-        <div className="mx-auto max-w-6xl px-5 md:px-8">
-          <Reveal>
-            <h2 className="display text-4xl md:text-5xl">Patient voices</h2>
-          </Reveal>
-          <div className="mt-12 grid gap-10 md:grid-cols-3">
-            {testimonials.map((t, i) => (
-              <Reveal key={t.name} delay={i * 100}>
-                <blockquote>
-                  <p className="text-lg leading-relaxed text-[var(--ink-soft)]">
-                    “{t.quote}”
-                  </p>
-                  <footer className="mt-6">
-                    <p className="font-medium text-[var(--deep)]">{t.name}</p>
-                    <p className="text-sm text-[var(--muted)]">{t.detail}</p>
-                  </footer>
-                </blockquote>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section-pad">
-        <Reveal>
-          <div className="mx-auto max-w-4xl px-5 text-center md:px-8">
-            <h2 className="display text-4xl md:text-6xl">
-              Ready to book an open slot?
-            </h2>
-            <p className="mx-auto mt-5 max-w-xl text-lg text-[var(--ink-soft)]">
-              Choose clinic or virtual consultation. If the slot is free, your
-              booking is confirmed immediately.
+      <section id="book" className="section-pad scroll-mt-28">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[0.9fr_1.1fr] md:px-8">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+              Book on this page
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Link href="/book" className="btn-primary">
-                Book now
-              </Link>
-              <Link href="/contact" className="btn-ghost">
-                Ask a question
-              </Link>
+            <h2 className="display mt-3 text-4xl md:text-5xl">
+              Clinic or virtual — pick an open slot
+            </h2>
+            <p className="mt-4 text-lg text-[var(--ink-soft)]">
+              No separate booking page needed. Available slots confirm
+              immediately. Virtual visits get a Google Meet link.
+            </p>
+            <div className="mt-8 space-y-2 text-sm text-[var(--ink-soft)]">
+              <p>
+                <span className="text-[var(--muted)]">Phone:</span> {clinic.phone}
+              </p>
+              <p>
+                <span className="text-[var(--muted)]">Email:</span> {clinic.email}
+              </p>
+              <p>
+                <span className="text-[var(--muted)]">Clinic:</span>{" "}
+                {clinic.address.line1}, {clinic.address.line2}
+              </p>
             </div>
           </div>
-        </Reveal>
+          <div className="rounded-[1.5rem] border border-[var(--line)] bg-white p-6 shadow-[0_24px_60px_rgba(6,51,44,0.08)] md:p-8">
+            <AppointmentForm />
+          </div>
+        </div>
+      </section>
+
+      <section className="section-pad border-t border-[var(--line)] bg-white/50">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <h2 className="display text-4xl md:text-5xl">Patient voices</h2>
+          <div className="mt-12 grid gap-10 md:grid-cols-3">
+            {testimonials.map((t) => (
+              <blockquote key={t.name}>
+                <p className="text-lg leading-relaxed text-[var(--ink-soft)]">
+                  “{t.quote}”
+                </p>
+                <footer className="mt-6">
+                  <p className="font-medium text-[var(--deep)]">{t.name}</p>
+                  <p className="text-sm text-[var(--muted)]">{t.detail}</p>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+        </div>
       </section>
     </>
   );

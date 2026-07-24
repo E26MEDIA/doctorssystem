@@ -198,3 +198,59 @@ export const articles = [
     ],
   },
 ] as const;
+
+/** Practice photos + Instagram reels from @dr.honnani / @dr_honnani */
+export const galleryPhotos = [
+  {
+    src: "/images/gallery-2.jpg",
+    alt: "Dr. Sharath S. Honnani",
+    caption: "Dr. Sharath S. Honnani",
+  },
+  {
+    src: "/images/gallery-1.jpg",
+    alt: "Surgical care environment",
+    caption: "Surgical care",
+  },
+  {
+    src: "/images/gallery-3.jpg",
+    alt: "Clinic consultation setting",
+    caption: "Clinic consultation",
+  },
+  {
+    src: "/images/gallery-4.jpg",
+    alt: "Virtual consultation",
+    caption: "Virtual care",
+  },
+  {
+    src: "/images/gallery-5.jpg",
+    alt: "Hospital corridor light",
+    caption: "Hospital care",
+  },
+  {
+    src: "/images/gallery-6.jpg",
+    alt: "Clinical detail",
+    caption: "Precision work",
+  },
+  {
+    src: "/images/gallery-7.jpg",
+    alt: "Care team atmosphere",
+    caption: "Patient-first setting",
+  },
+  {
+    src: "/images/gallery-8.jpg",
+    alt: "Quiet recovery space",
+    caption: "Recovery focus",
+  },
+] as const;
+
+export const instagramReels = [
+  {
+    id: "CyOIQ11xYrv",
+    url: "https://www.instagram.com/dr_honnani/reel/CyOIQ11xYrv/",
+    title: "Fish bone removal — endoscopy",
+    caption:
+      "Day-care endoscopy: fish bone removed from behind the epiglottis after throat irritation following a foreign trip.",
+  },
+] as const;
+
+export const instagramProfile = "https://www.instagram.com/dr.honnani/" as const;

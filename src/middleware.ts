@@ -5,12 +5,13 @@ const isProd = process.env.NODE_ENV === "production";
 function buildCsp() {
   const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com",
-    "font-src 'self' data:",
-    // Allow tunnels / preview hosts to call same-origin APIs
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.instagram.com https://platform.instagram.com",
+    "style-src 'self' 'unsafe-inline' https://www.instagram.com",
+    "img-src 'self' data: blob: https: http:",
+    "font-src 'self' data: https:",
     "connect-src 'self' https: http: ws: wss:",
+    "frame-src 'self' https://www.instagram.com https://instagram.com",
+    "child-src 'self' https://www.instagram.com https://instagram.com",
     // Soften in non-prod so Cursor / iframe previews can load the site
     isProd ? "frame-ancestors 'none'" : "frame-ancestors *",
     "base-uri 'self'",

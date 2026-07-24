@@ -10,8 +10,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
-  { href: "/book", label: "Book" },
-  { href: "/journal", label: "Journal" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -82,11 +81,9 @@ export function Header({ brand }: { brand: Brand }) {
             );
           })}
           <Link
-            href="/book"
+            href="/#book"
             className={`btn-primary !px-5 !py-2.5 text-sm ${
-              overHero
-                ? "!bg-[var(--teal-bright)] !text-[var(--deep)]"
-                : ""
+              overHero ? "!bg-[var(--teal-bright)] !text-[var(--deep)]" : ""
             }`}
           >
             Book visit
@@ -132,7 +129,7 @@ export function Header({ brand }: { brand: Brand }) {
               {link.label}
             </Link>
           ))}
-          <Link href="/book" className="btn-primary mt-2 text-center">
+          <Link href="/#book" className="btn-primary mt-2 text-center">
             Book visit
           </Link>
         </nav>

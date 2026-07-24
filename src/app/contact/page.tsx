@@ -26,7 +26,7 @@ export default async function ContactPage() {
           </h1>
           <p className="mt-5 max-w-md text-lg text-[var(--ink-soft)]">
             For appointments, use{" "}
-            <a href="/book" className="font-medium text-[var(--teal)] underline-offset-4 hover:underline">
+            <a href="/#book" className="font-medium text-[var(--teal)] underline-offset-4 hover:underline">
               Book
             </a>
             . For general questions, send a message below.

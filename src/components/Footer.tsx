@@ -68,11 +68,11 @@ export function Footer({ clinic }: { clinic: ClinicConfig }) {
             <Link href="/services" className="hover:text-[var(--teal-bright)]">
               Services
             </Link>
-            <Link href="/book" className="hover:text-[var(--teal-bright)]">
-              Book appointment
+            <Link href="/gallery" className="hover:text-[var(--teal-bright)]">
+              Gallery
             </Link>
-            <Link href="/journal" className="hover:text-[var(--teal-bright)]">
-              Journal
+            <Link href="/#book" className="hover:text-[var(--teal-bright)]">
+              Book appointment
             </Link>
             <Link href="/contact" className="hover:text-[var(--teal-bright)]">
               Contact
