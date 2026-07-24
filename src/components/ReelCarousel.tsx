@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { instagramProfile, instagramReels } from "@/lib/clinic";
 
 type ReelItem = {
@@ -33,96 +33,99 @@ function buildItems(): ReelItem[] {
   }));
 }
 
+/** Shortest signed distance on a circular list */
+function circularOffset(index: number, active: number, length: number) {
+  let offset = index - active;
+  if (offset > length / 2) offset -= length;
+  if (offset < -length / 2) offset += length;
+  return offset;
+}
+
 export function ReelCarousel() {
   const items = useMemo(() => buildItems(), []);
   const [active, setActive] = useState(0);
-  const [failed, setFailed] = useState<Record<string, boolean>>({});
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (items.length < 2 || paused) return;
+    const timer = window.setInterval(() => {
+      setActive((prev) => (prev + 1) % items.length);
+    }, 6500);
+    return () => window.clearInterval(timer);
+  }, [items.length, paused]);
 
   if (items.length === 0) return null;
 
   const current = items[active];
+  const len = items.length;
 
   function go(delta: number) {
-    setActive((prev) => (prev + delta + items.length) % items.length);
+    setActive((prev) => (prev + delta + len) % len);
   }
 
   return (
-    <div className="reel-carousel">
-      <div className="relative mx-auto flex max-w-5xl items-center justify-center gap-2 md:gap-4">
+    <div
+      className="reel-carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setPaused(false);
+        }
+      }}
+    >
+      <div className="relative mx-auto flex max-w-5xl items-center justify-center gap-3 md:gap-5">
         <button
           type="button"
           aria-label="Previous reel"
-          onClick={() => go(-1)}
-          className="reel-nav z-20 shrink-0"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            go(-1);
+          }}
+          className="reel-nav relative z-50 shrink-0"
         >
           <span aria-hidden>‹</span>
         </button>
 
-        <div className="relative flex h-[min(72vh,640px)] w-full max-w-[920px] items-center justify-center overflow-visible">
+        <div className="relative z-10 flex h-[min(72vh,640px)] w-full max-w-[860px] items-center justify-center overflow-visible">
           {items.map((item, index) => {
-            const offset = index - active;
+            const offset = circularOffset(index, active, len);
             const abs = Math.abs(offset);
             if (abs > 2) return null;
 
             const isCenter = offset === 0;
-            const scale = isCenter ? 1 : abs === 1 ? 0.82 : 0.68;
-            const x = offset * (abs === 1 ? 210 : abs === 2 ? 340 : 0);
-            const z = isCenter ? 30 : 10 - abs * 5;
-            const opacity = isCenter ? 1 : abs === 1 ? 0.72 : 0.4;
-            const showEmbed = isCenter && !failed[item.id];
+            const scale = isCenter ? 1 : abs === 1 ? 0.78 : 0.62;
+            const x =
+              offset === 0
+                ? 0
+                : offset * (abs === 1 ? 195 : 320);
+            const z = isCenter ? 20 : 10 - abs;
+            const opacity = isCenter ? 1 : abs === 1 ? 0.78 : 0.42;
 
             const shellClass =
               "absolute top-1/2 left-1/2 origin-center overflow-hidden rounded-[1.6rem] border border-white/30 bg-[var(--deep)] shadow-[0_28px_60px_rgba(6,51,44,0.28)] transition-all duration-500 ease-out";
-            const shellStyle = {
-              width: isCenter ? "min(340px, 78vw)" : "min(260px, 58vw)",
-              height: isCenter ? "min(600px, 70vh)" : "min(480px, 58vh)",
+            const shellStyle: CSSProperties = {
+              width: isCenter ? "min(320px, 72vw)" : "min(240px, 52vw)",
+              height: isCenter ? "min(560px, 66vh)" : "min(440px, 54vh)",
               transform: `translate(-50%, -50%) translateX(${x}px) scale(${scale})`,
               zIndex: z,
               opacity,
-              pointerEvents: (abs > 1 ? "none" : "auto") as "none" | "auto",
+              pointerEvents: abs > 1 ? "none" : "auto",
             };
 
             if (isCenter) {
               return (
                 <div key={item.id} className={shellClass} style={shellStyle}>
-                  {showEmbed ? (
-                    <iframe
-                      title={item.title}
-                      src={`https://www.instagram.com/reel/${item.id}/embed`}
-                      className="h-full w-full border-0 bg-black"
-                      loading="eager"
-                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
-                      allowFullScreen
-                      onError={() =>
-                        setFailed((prev) => ({ ...prev, [item.id]: true }))
-                      }
-                    />
-                  ) : (
-                    <div className="relative h-full w-full">
-                      <Image
-                        src={item.poster}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                        sizes="340px"
-                        priority
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      <div className="absolute inset-x-0 bottom-0 p-5 text-left text-white">
-                        <p className="text-sm font-medium leading-snug">
-                          {item.title}
-                        </p>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-medium text-white"
-                        >
-                          View
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                  <iframe
+                    title={item.title}
+                    src={`https://www.instagram.com/reel/${item.id}/embed`}
+                    className="pointer-events-auto h-full w-full border-0 bg-black"
+                    loading="eager"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+                    allowFullScreen
+                  />
                 </div>
               );
             }
@@ -142,11 +145,11 @@ export function ReelCarousel() {
                     alt=""
                     fill
                     className="object-cover"
-                    sizes="260px"
+                    sizes="240px"
                   />
-                  <div className="absolute inset-0 bg-black/25" />
+                  <div className="absolute inset-0 bg-black/30" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur-sm">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-xl text-white backdrop-blur-sm">
                       ▶
                     </span>
                   </div>
@@ -159,8 +162,12 @@ export function ReelCarousel() {
         <button
           type="button"
           aria-label="Next reel"
-          onClick={() => go(1)}
-          className="reel-nav z-20 shrink-0"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            go(1);
+          }}
+          className="reel-nav relative z-50 shrink-0"
         >
           <span aria-hidden>›</span>
         </button>
