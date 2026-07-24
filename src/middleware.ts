@@ -10,8 +10,9 @@ function buildCsp() {
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' data: https:",
     "connect-src 'self' https: http: ws: wss:",
-    "frame-src 'self' https://www.instagram.com https://instagram.com",
-    "child-src 'self' https://www.instagram.com https://instagram.com",
+    "frame-src 'self' https://www.instagram.com https://instagram.com https://www.facebook.com",
+    "child-src 'self' https://www.instagram.com https://instagram.com https://www.facebook.com",
+    "media-src 'self' https: blob:",
     // Soften in non-prod so Cursor / iframe previews can load the site
     isProd ? "frame-ancestors 'none'" : "frame-ancestors *",
     "base-uri 'self'",
@@ -30,7 +31,8 @@ function buildCsp() {
 const securityHeaders: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Permissions-Policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), fullscreen=(self \"https://www.instagram.com\")",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "cross-origin",
   "X-DNS-Prefetch-Control": "off",
