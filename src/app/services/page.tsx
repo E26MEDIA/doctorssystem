@@ -55,7 +55,7 @@ export default async function ServicesPage() {
                 </p>
                 {(service.slug === "clinic-consultation" ||
                   service.slug === "virtual-consultation") && (
-                  <Link href="/book" className="btn-primary mt-7">
+                  <Link href="/#book" className="btn-primary mt-7">
                     Book {service.title.toLowerCase()}
                   </Link>
                 )}
