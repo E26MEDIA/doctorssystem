@@ -1,23 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { instagramProfile, instagramReels } from "@/lib/clinic";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { instagramProfile, localReels } from "@/lib/clinic";
 
 type ReelItem = {
   id: string;
-  url: string;
+  src: string;
   title: string;
   caption: string;
 };
-
-function buildItems(): ReelItem[] {
-  return instagramReels.map((reel) => ({
-    id: reel.id,
-    url: reel.url,
-    title: reel.title,
-    caption: reel.caption,
-  }));
-}
 
 function circularOffset(index: number, active: number, length: number) {
   let offset = index - active;
@@ -27,15 +18,33 @@ function circularOffset(index: number, active: number, length: number) {
 }
 
 export function ReelCarousel() {
-  const items = useMemo(() => buildItems(), []);
+  const items = useMemo(() => localReels as ReelItem[], []);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+
+  useEffect(() => {
+    // Play only the active center reel; pause others
+    items.forEach((item, index) => {
+      const el = videoRefs.current[item.id];
+      if (!el) return;
+      if (index === active) {
+        el.muted = true;
+        el.playsInline = true;
+        const playPromise = el.play();
+        if (playPromise) playPromise.catch(() => undefined);
+      } else {
+        el.pause();
+        el.currentTime = 0;
+      }
+    });
+  }, [active, items]);
 
   useEffect(() => {
     if (items.length < 2 || paused) return;
     const timer = window.setInterval(() => {
       setActive((prev) => (prev + 1) % items.length);
-    }, 7000);
+    }, 8000);
     return () => window.clearInterval(timer);
   }, [items.length, paused]);
 
@@ -55,7 +64,6 @@ export function ReelCarousel() {
       onMouseLeave={() => setPaused(false)}
     >
       <div className="relative mx-auto max-w-4xl px-12 md:px-16">
-        {/* Arrows outside the stage so the iframe never blocks them */}
         <button
           type="button"
           aria-label="Previous reel"
@@ -73,22 +81,22 @@ export function ReelCarousel() {
           <span aria-hidden>›</span>
         </button>
 
-        <div className="relative mx-auto h-[min(70vh,620px)] w-full overflow-visible">
+        <div className="relative mx-auto h-[min(70vh,620px)] w-full bg-transparent">
           {items.map((item, index) => {
             const offset = circularOffset(index, active, len);
             const abs = Math.abs(offset);
-            if (abs > 1) return null; // only center + one each side (Kalki-like)
+            if (abs > 1) return null;
 
             const isCenter = offset === 0;
             const scale = isCenter ? 1 : 0.78;
             const x = offset * 210;
             const z = isCenter ? 20 : 8;
-            const opacity = isCenter ? 1 : 0.55;
+            const opacity = isCenter ? 1 : 0.7;
 
             return (
               <div
                 key={item.id}
-                className="absolute top-1/2 left-1/2 overflow-hidden rounded-[1.75rem] bg-[#0b1220] shadow-[0_30px_70px_rgba(6,51,44,0.22)] transition-all duration-500 ease-out"
+                className="absolute top-1/2 left-1/2 overflow-hidden rounded-[1.75rem] bg-black shadow-[0_30px_70px_rgba(6,51,44,0.22)] transition-all duration-500 ease-out"
                 style={{
                   width: isCenter ? "min(300px, 70vw)" : "min(230px, 48vw)",
                   height: isCenter ? "min(540px, 64vh)" : "min(420px, 52vh)",
@@ -97,45 +105,48 @@ export function ReelCarousel() {
                   opacity,
                 }}
               >
-                {isCenter ? (
-                  <div className="reel-crop relative h-full w-full">
-                    <iframe
-                      key={item.id}
-                      title={item.title}
-                      src={`https://www.instagram.com/reel/${item.id}/embed`}
-                      className="reel-crop-iframe"
-                      loading="eager"
-                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
-                      allowFullScreen
-                    />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent px-4 pb-4 pt-16 text-white">
-                      <p className="text-sm font-medium leading-snug line-clamp-2">
-                        {item.title}
-                      </p>
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="pointer-events-auto mt-3 flex w-full items-center justify-center rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
-                      >
-                        View
-                      </a>
-                    </div>
-                  </div>
-                ) : (
+                <video
+                  ref={(el) => {
+                    videoRefs.current[item.id] = el;
+                  }}
+                  src={item.src}
+                  className="h-full w-full object-cover"
+                  muted
+                  playsInline
+                  loop
+                  preload={isCenter ? "auto" : "metadata"}
+                  onClick={() => {
+                    if (!isCenter) setActive(index);
+                  }}
+                />
+
+                {!isCenter && (
                   <button
                     type="button"
-                    className="relative flex h-full w-full flex-col items-center justify-center bg-[linear-gradient(160deg,#06332c_0%,#0a4a40_55%,#10241f_100%)] text-white"
+                    className="absolute inset-0 flex items-center justify-center bg-black/25"
                     onClick={() => setActive(index)}
-                    aria-label={`Show ${item.title}`}
+                    aria-label={`Play ${item.title}`}
                   >
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/10 text-2xl backdrop-blur-sm">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-black/40 text-2xl text-white backdrop-blur-sm">
                       ▶
                     </span>
-                    <span className="mt-4 max-w-[80%] text-center text-xs uppercase tracking-[0.18em] text-white/70">
-                      Reel {index + 1}
-                    </span>
                   </button>
+                )}
+
+                {isCenter && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent px-4 pb-4 pt-16 text-white">
+                    <p className="text-sm font-medium leading-snug">
+                      {item.title}
+                    </p>
+                    <a
+                      href={instagramProfile}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="pointer-events-auto mt-3 flex w-full items-center justify-center rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
+                    >
+                      View
+                    </a>
+                  </div>
                 )}
               </div>
             );

@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReelCarousel } from "@/components/ReelCarousel";
 import { Reveal } from "@/components/Reveal";
-import { galleryPhotos, instagramProfile, instagramReels } from "@/lib/clinic";
+import { galleryPhotos, instagramProfile, localReels } from "@/lib/clinic";
 
 type Props = {
   limitPhotos?: number;
@@ -86,16 +86,15 @@ export function GallerySection({
             </a>
           </div>
 
-          {instagramReels.length > 0 ? (
+          {localReels.length > 0 ? (
             <ReelCarousel />
           ) : (
             <div className="rounded-[1.4rem] border border-dashed border-[var(--line)] bg-white/70 px-6 py-14 text-center">
               <p className="display text-2xl text-[var(--deep)]">
-                Reel links coming next
+                Reel videos coming next
               </p>
               <p className="mx-auto mt-3 max-w-md text-[var(--ink-soft)]">
-                Share 7–8 Instagram reel URLs and they will play here in the
-                coverflow slider.
+                Upload reel videos to show them in the coverflow slider.
               </p>
               <a
                 href={instagramProfile}

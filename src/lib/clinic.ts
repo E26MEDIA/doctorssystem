@@ -244,72 +244,36 @@ export const galleryPhotos = [
 ] as const;
 
 /**
- * Instagram reels for the coverflow carousel.
- * Format: https://www.instagram.com/reel/{id}/
+ * Local reel videos for the Kalki-style coverflow carousel.
+ * Add more files under /public/videos/reels/ as reel-06.mp4, etc.
  */
+export const localReels: ReadonlyArray<{
+  id: string;
+  src: string;
+  title: string;
+  caption: string;
+}> = [
+  {
+    id: "reel-01",
+    src: "/videos/reels/reel-01.mp4",
+    title: "Clinical reel 1",
+    caption: "From Dr. Honnani — surgical gastroenterology insights.",
+  },
+  {
+    id: "reel-02",
+    src: "/videos/reels/reel-02.mp4",
+    title: "Clinical reel 2",
+    caption: "Patient education and procedure highlights.",
+  },
+];
+
+/** @deprecated Prefer localReels — kept for Instagram fallback links */
 export const instagramReels: ReadonlyArray<{
   id: string;
   url: string;
   title: string;
   caption: string;
   poster?: string;
-}> = [
-  {
-    id: "DarviQoSQqy",
-    url: "https://www.instagram.com/reel/DarviQoSQqy/",
-    title: "Clinical reel 1",
-    caption: "From @dr.honnani — surgical gastroenterology insights.",
-    poster: "/images/gallery-2.jpg",
-  },
-  {
-    id: "DaxAFnly-sh",
-    url: "https://www.instagram.com/reel/DaxAFnly-sh/",
-    title: "Clinical reel 2",
-    caption: "Patient education and procedure highlights.",
-    poster: "/images/gallery-1.jpg",
-  },
-  {
-    id: "Da2tjvvyp02",
-    url: "https://www.instagram.com/reel/Da2tjvvyp02/",
-    title: "Clinical reel 3",
-    caption: "Clinical moments from the practice.",
-    poster: "/images/gallery-3.jpg",
-  },
-  {
-    id: "Da-SosLSRXH",
-    url: "https://www.instagram.com/reel/Da-SosLSRXH/",
-    title: "Clinical reel 4",
-    caption: "Endoscopy and GI surgical care notes.",
-    poster: "/images/gallery-4.jpg",
-  },
-  {
-    id: "DbH_NMxyZQ5",
-    url: "https://www.instagram.com/reel/DbH_NMxyZQ5/",
-    title: "Clinical reel 5",
-    caption: "Laparoscopic and minimally invasive care.",
-    poster: "/images/gallery-5.jpg",
-  },
-  {
-    id: "DS9usW3Evht",
-    url: "https://www.instagram.com/reel/DS9usW3Evht/",
-    title: "Clinical reel 6",
-    caption: "Hernia and abdominal wall education.",
-    poster: "/images/gallery-6.jpg",
-  },
-  {
-    id: "DS2LnWOEjmi",
-    url: "https://www.instagram.com/reel/DS2LnWOEjmi/",
-    title: "Clinical reel 7",
-    caption: "Recovery and patient guidance.",
-    poster: "/images/gallery-7.jpg",
-  },
-  {
-    id: "DU5su-Vkge5",
-    url: "https://www.instagram.com/reel/DU5su-Vkge5/",
-    title: "Clinical reel 8",
-    caption: "More from Dr. Honnani’s Instagram.",
-    poster: "/images/gallery-8.jpg",
-  },
-];
+}> = [];
 
 export const instagramProfile = "https://www.instagram.com/dr.honnani/" as const;
