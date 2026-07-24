@@ -243,14 +243,28 @@ export const galleryPhotos = [
   },
 ] as const;
 
-export const instagramReels = [
-  {
-    id: "CyOIQ11xYrv",
-    url: "https://www.instagram.com/dr_honnani/reel/CyOIQ11xYrv/",
-    title: "Fish bone removal — endoscopy",
-    caption:
-      "Day-care endoscopy: fish bone removed from behind the epiglottis after throat irritation following a foreign trip.",
-  },
-] as const;
+/**
+ * Paste 7–8 Instagram reel URLs here (example format):
+ * https://www.instagram.com/reel/XXXXXXXXXXX/
+ * or https://www.instagram.com/dr.honnani/reel/XXXXXXXXXXX/
+ *
+ * Leave empty until real reel links are provided — broken embeds will not show.
+ */
+export const instagramReels: ReadonlyArray<{
+  id: string;
+  url: string;
+  title: string;
+  caption: string;
+  poster?: string;
+}> = [
+  // Example (disabled until you paste working links):
+  // {
+  //   id: "XXXXXXXXXXX",
+  //   url: "https://www.instagram.com/reel/XXXXXXXXXXX/",
+  //   title: "Reel title",
+  //   caption: "Short description",
+  //   poster: "/images/gallery-2.jpg",
+  // },
+];
 
 export const instagramProfile = "https://www.instagram.com/dr.honnani/" as const;

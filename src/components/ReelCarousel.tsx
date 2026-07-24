@@ -10,7 +10,6 @@ type ReelItem = {
   title: string;
   caption: string;
   poster: string;
-  embeddable: boolean;
 };
 
 const FALLBACK_POSTERS = [
@@ -19,68 +18,32 @@ const FALLBACK_POSTERS = [
   "/images/gallery-1.jpg",
   "/images/gallery-4.jpg",
   "/images/gallery-6.jpg",
+  "/images/gallery-5.jpg",
+  "/images/gallery-7.jpg",
+  "/images/gallery-8.jpg",
 ];
 
 function buildItems(): ReelItem[] {
-  const known: ReelItem[] = instagramReels.map((reel, i) => ({
+  return instagramReels.map((reel, i) => ({
     id: reel.id,
     url: reel.url,
     title: reel.title,
     caption: reel.caption,
-    poster: FALLBACK_POSTERS[i % FALLBACK_POSTERS.length],
-    embeddable: true,
+    poster: reel.poster || FALLBACK_POSTERS[i % FALLBACK_POSTERS.length],
   }));
-
-  // Extra cover-flow slides so the section feels like a full reel strip.
-  // They deep-link to Instagram until more reel IDs are added.
-  const extras: ReelItem[] = [
-    {
-      id: "more-lap",
-      url: instagramProfile,
-      title: "Laparoscopic care insights",
-      caption: "Watch more clinical reels on @dr.honnani.",
-      poster: "/images/gallery-1.jpg",
-      embeddable: false,
-    },
-    {
-      id: "more-hernia",
-      url: instagramProfile,
-      title: "Hernia & abdominal wall",
-      caption: "Patient education reels from the practice.",
-      poster: "/images/gallery-3.jpg",
-      embeddable: false,
-    },
-    {
-      id: "more-edu",
-      url: instagramProfile,
-      title: "GI surgery education",
-      caption: "Short clinical notes and procedure highlights.",
-      poster: "/images/gallery-4.jpg",
-      embeddable: false,
-    },
-  ];
-
-  return [...known, ...extras];
 }
 
 export function ReelCarousel() {
   const items = useMemo(() => buildItems(), []);
   const [active, setActive] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [failed, setFailed] = useState<Record<string, boolean>>({});
+
+  if (items.length === 0) return null;
 
   const current = items[active];
 
   function go(delta: number) {
-    setActive((prev) => {
-      const next = (prev + delta + items.length) % items.length;
-      setPlaying(items[next]?.embeddable ?? false);
-      return next;
-    });
-  }
-
-  function select(index: number) {
-    setActive(index);
-    setPlaying(items[index]?.embeddable ?? false);
+    setActive((prev) => (prev + delta + items.length) % items.length);
   }
 
   return (
@@ -103,73 +66,91 @@ export function ReelCarousel() {
 
             const isCenter = offset === 0;
             const scale = isCenter ? 1 : abs === 1 ? 0.82 : 0.68;
-            const x = offset * (isCenter ? 0 : abs === 1 ? 210 : 340);
+            const x = offset * (abs === 1 ? 210 : abs === 2 ? 340 : 0);
             const z = isCenter ? 30 : 10 - abs * 5;
             const opacity = isCenter ? 1 : abs === 1 ? 0.72 : 0.4;
+            const showEmbed = isCenter && !failed[item.id];
+
+            const shellClass =
+              "absolute top-1/2 left-1/2 origin-center overflow-hidden rounded-[1.6rem] border border-white/30 bg-[var(--deep)] shadow-[0_28px_60px_rgba(6,51,44,0.28)] transition-all duration-500 ease-out";
+            const shellStyle = {
+              width: isCenter ? "min(340px, 78vw)" : "min(260px, 58vw)",
+              height: isCenter ? "min(600px, 70vh)" : "min(480px, 58vh)",
+              transform: `translate(-50%, -50%) translateX(${x}px) scale(${scale})`,
+              zIndex: z,
+              opacity,
+              pointerEvents: (abs > 1 ? "none" : "auto") as "none" | "auto",
+            };
+
+            if (isCenter) {
+              return (
+                <div key={item.id} className={shellClass} style={shellStyle}>
+                  {showEmbed ? (
+                    <iframe
+                      title={item.title}
+                      src={`https://www.instagram.com/reel/${item.id}/embed`}
+                      className="h-full w-full border-0 bg-black"
+                      loading="eager"
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+                      allowFullScreen
+                      onError={() =>
+                        setFailed((prev) => ({ ...prev, [item.id]: true }))
+                      }
+                    />
+                  ) : (
+                    <div className="relative h-full w-full">
+                      <Image
+                        src={item.poster}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                        sizes="340px"
+                        priority
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-5 text-left text-white">
+                        <p className="text-sm font-medium leading-snug">
+                          {item.title}
+                        </p>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-medium text-white"
+                        >
+                          View
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => (isCenter ? undefined : select(index))}
-                className="absolute top-1/2 left-1/2 origin-center overflow-hidden rounded-[1.6rem] border border-white/30 bg-[var(--deep)] shadow-[0_28px_60px_rgba(6,51,44,0.28)] transition-all duration-500 ease-out"
-                style={{
-                  width: isCenter ? "min(340px, 78vw)" : "min(260px, 58vw)",
-                  height: isCenter ? "min(600px, 70vh)" : "min(480px, 58vh)",
-                  transform: `translate(-50%, -50%) translateX(${x}px) scale(${scale})`,
-                  zIndex: z,
-                  opacity,
-                  pointerEvents: abs > 1 ? "none" : "auto",
-                }}
-                aria-label={item.title}
+                onClick={() => setActive(index)}
+                className={shellClass}
+                style={shellStyle}
+                aria-label={`Show ${item.title}`}
               >
-                {isCenter && item.embeddable && playing ? (
-                  <iframe
-                    title={item.title}
-                    src={`https://www.instagram.com/reel/${item.id}/embed`}
-                    className="h-full w-full border-0 bg-black"
-                    loading="eager"
-                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                    allowFullScreen
+                <div className="relative h-full w-full">
+                  <Image
+                    src={item.poster}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="260px"
                   />
-                ) : (
-                  <div className="relative h-full w-full">
-                    <Image
-                      src={item.poster}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="340px"
-                      priority={isCenter}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-                    {isCenter && (
-                      <div className="absolute inset-x-0 bottom-0 p-5 text-left text-white">
-                        <p className="text-sm font-medium leading-snug">
-                          {item.title}
-                        </p>
-                        <button
-                          type="button"
-                          className="mt-3 w-full rounded-full bg-black px-4 py-3 text-sm font-medium text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (item.embeddable) setPlaying(true);
-                            else window.open(item.url, "_blank", "noopener,noreferrer");
-                          }}
-                        >
-                          {item.embeddable ? "Play reel" : "View on Instagram"}
-                        </button>
-                      </div>
-                    )}
-                    {!isCenter && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur-sm">
-                          ▶
-                        </span>
-                      </div>
-                    )}
+                  <div className="absolute inset-0 bg-black/25" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur-sm">
+                      ▶
+                    </span>
                   </div>
-                )}
+                </div>
               </button>
             );
           })}
@@ -192,13 +173,13 @@ export function ReelCarousel() {
         <p className="mt-2 text-sm leading-relaxed text-[var(--ink-soft)]">
           {current.caption}
         </p>
-        <div className="mt-5 flex items-center justify-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           {items.map((item, index) => (
             <button
               key={item.id}
               type="button"
               aria-label={`Go to ${item.title}`}
-              onClick={() => select(index)}
+              onClick={() => setActive(index)}
               className={`h-2 rounded-full transition-all ${
                 index === active
                   ? "w-8 bg-[var(--teal)]"

@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { GallerySection } from "@/components/GallerySection";
-import { doctorProfile, testimonials } from "@/lib/clinic";
+import { articles, doctorProfile, testimonials } from "@/lib/clinic";
 import { getActiveServices, getClinicConfig } from "@/lib/settings";
 
 export default async function HomePage() {
@@ -17,6 +17,7 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* 1. Hero */}
       <section className="relative min-h-[100svh] overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -47,23 +48,89 @@ export default async function HomePage() {
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
-                href="/gallery"
+                href="/#book"
                 className="btn-primary !bg-[var(--teal-bright)] !text-[var(--deep)] !shadow-[0_12px_32px_rgba(20,184,166,0.35)] hover:!bg-white"
               >
-                View gallery
+                Book consultation
               </Link>
               <Link
-                href="/#book"
+                href="/about"
                 className="btn-ghost !border-white/35 !text-white hover:!border-[var(--teal-bright)] hover:!bg-white/10 hover:!text-white"
               >
-                Book consultation
+                About {doctorProfile.shortName}
               </Link>
             </div>
           </div>
         </div>
       </section>
 
+      {/* 2. Doctor details */}
       <section className="section-pad">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center md:px-8">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
+            <Image
+              src="/images/doctor.jpg"
+              alt={clinic.doctor}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+            />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+              Physician
+            </p>
+            <h2 className="display mt-3 text-4xl md:text-5xl">{clinic.doctor}</h2>
+            <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
+            <p className="mt-6 text-lg leading-relaxed text-[var(--ink-soft)]">
+              {doctorProfile.bio[0]}
+            </p>
+            <p className="mt-4 text-lg leading-relaxed text-[var(--ink-soft)]">
+              {doctorProfile.bio[1]}
+            </p>
+            <Link href="/about" className="btn-ghost mt-8">
+              Education & experience
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Areas of working */}
+      <section className="section-pad bg-[var(--deep)] text-white">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal-bright)]">
+                Expertise
+              </p>
+              <h2 className="display mt-3 text-4xl md:text-5xl">
+                Areas of surgical focus
+              </h2>
+            </div>
+            <Link
+              href="/services"
+              className="text-sm text-[var(--teal-bright)] underline-offset-4 hover:underline"
+            >
+              View all services →
+            </Link>
+          </div>
+
+          <div className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
+            {doctorProfile.expertise.map((item) => (
+              <div
+                key={item}
+                className="border-l-2 border-[var(--teal-bright)]/40 pl-5"
+              >
+                <p className="text-lg text-white/90">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Gallery — photos first, then reels */}
+      <section id="gallery" className="section-pad scroll-mt-28">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
             <div>
@@ -85,66 +152,54 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section-pad bg-[var(--deep)] text-white">
+      {/* 5. Journal / articles */}
+      <section className="section-pad border-y border-[var(--line)] bg-white/55">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal-bright)]">
-                Expertise
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+                Journal
               </p>
               <h2 className="display mt-3 text-4xl md:text-5xl">
-                Areas of surgical focus
+                Articles & patient notes
               </h2>
             </div>
             <Link
-              href="/services"
-              className="text-sm text-[var(--teal-bright)] underline-offset-4 hover:underline"
+              href="/journal"
+              className="text-sm font-medium text-[var(--teal)] underline-offset-4 hover:underline"
             >
-              View all services →
+              All articles →
             </Link>
           </div>
-
-          <div className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
-            {doctorProfile.expertise.slice(0, 6).map((item) => (
-              <div
-                key={item}
-                className="border-l-2 border-[var(--teal-bright)]/40 pl-5"
+          <div className="grid gap-6 md:grid-cols-3">
+            {articles.map((article) => (
+              <article
+                key={article.slug}
+                className="rounded-[1.25rem] border border-[var(--line)] bg-white/90 p-6"
               >
-                <p className="text-lg text-white/90">{item}</p>
-              </div>
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+                  {article.category}
+                </p>
+                <h3 className="display mt-2 text-2xl text-[var(--deep)]">
+                  {article.title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">
+                  {article.excerpt}
+                </p>
+                <Link
+                  href={`/journal/${article.slug}`}
+                  className="mt-5 inline-flex text-sm font-medium text-[var(--teal)] underline-offset-4 hover:underline"
+                >
+                  Read article
+                </Link>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
+      {/* 6. How to consult + booking */}
       <section className="section-pad">
-        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center md:px-8">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
-            <Image
-              src="/images/doctor.jpg"
-              alt={clinic.doctor}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-            />
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
-              Physician
-            </p>
-            <h2 className="display mt-3 text-4xl md:text-5xl">{clinic.doctor}</h2>
-            <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
-            <p className="mt-6 text-lg leading-relaxed text-[var(--ink-soft)]">
-              {doctorProfile.bio[0]}
-            </p>
-            <Link href="/about" className="btn-ghost mt-8">
-              Education & experience
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section-pad border-y border-[var(--line)] bg-white/50">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <h2 className="display text-4xl md:text-5xl">How to consult</h2>
           <p className="mt-4 max-w-2xl text-lg text-[var(--ink-soft)]">
@@ -192,7 +247,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="book" className="section-pad scroll-mt-28">
+      <section id="book" className="section-pad scroll-mt-28 border-t border-[var(--line)] bg-white/50">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[0.9fr_1.1fr] md:px-8">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
@@ -202,8 +257,8 @@ export default async function HomePage() {
               Clinic or virtual — pick an open slot
             </h2>
             <p className="mt-4 text-lg text-[var(--ink-soft)]">
-              No separate booking page needed. Available slots confirm
-              immediately. Virtual visits get a Google Meet link.
+              Available slots confirm immediately. Virtual visits get a Google
+              Meet link.
             </p>
             <div className="mt-8 space-y-2 text-sm text-[var(--ink-soft)]">
               <p>
@@ -224,7 +279,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section-pad border-t border-[var(--line)] bg-white/50">
+      <section className="section-pad">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <h2 className="display text-4xl md:text-5xl">Patient voices</h2>
           <div className="mt-12 grid gap-10 md:grid-cols-3">
