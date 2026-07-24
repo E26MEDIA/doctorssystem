@@ -7,12 +7,15 @@ export async function generateMetadata(): Promise<Metadata> {
   const clinic = await getClinicConfig();
   return {
     title: "Services",
-    description: `Care offerings at ${clinic.name}.`,
+    description: `Consultations and surgical care with ${clinic.doctor}.`,
   };
 }
 
 export default async function ServicesPage() {
-  const services = await getActiveServices();
+  const [clinic, services] = await Promise.all([
+    getClinicConfig(),
+    getActiveServices(),
+  ]);
 
   return (
     <div className="pt-28">
@@ -22,44 +25,40 @@ export default async function ServicesPage() {
             Services
           </p>
           <h1 className="display mt-3 max-w-3xl text-5xl md:text-6xl">
-            Clear offerings. Honest timelines.
+            Consultations & surgical pathways
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-[var(--ink-soft)]">
-            Every visit includes a written summary. Choose what you need — or
-            start with an annual physical and we will map the rest.
+            Start with a clinic or virtual consultation. Procedure planning
+            follows after clinical review with {clinic.doctor}.
           </p>
         </Reveal>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-24 md:px-8">
-        <div className="space-y-0">
+        <div className="grid gap-8 md:grid-cols-2">
           {services.map((service, i) => (
             <Reveal key={service.slug} delay={i * 60}>
-              <article
-                id={service.slug}
-                className="grid gap-4 border-t border-[var(--line)] py-10 md:grid-cols-[0.8fr_1.4fr_0.6fr] md:gap-8"
-              >
-                <h2 className="display text-3xl text-[var(--forest)] md:text-4xl">
-                  {service.title}
-                </h2>
-                <div>
-                  <p className="text-lg text-[var(--ink-soft)]">{service.summary}</p>
-                  <p className="mt-4 text-[var(--muted)] leading-relaxed">
-                    {service.details}
-                  </p>
+              <article className="h-full rounded-[1.4rem] border border-[var(--line)] bg-white/80 p-7 md:p-8">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 className="display text-3xl text-[var(--deep)]">
+                    {service.title}
+                  </h2>
+                  <span className="shrink-0 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                    {service.duration}
+                  </span>
                 </div>
-                <div className="md:text-right">
-                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--brass)]">
-                    Duration
-                  </p>
-                  <p className="mt-2 text-[var(--ink)]">{service.duration}</p>
-                  <Link
-                    href="/book"
-                    className="mt-6 inline-block text-sm text-[var(--teal)] underline-offset-4 hover:underline"
-                  >
-                    Book this →
+                <p className="mt-4 text-[var(--ink-soft)] leading-relaxed">
+                  {service.summary}
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-[var(--muted)]">
+                  {service.details}
+                </p>
+                {(service.slug === "clinic-consultation" ||
+                  service.slug === "virtual-consultation") && (
+                  <Link href="/book" className="btn-primary mt-7">
+                    Book {service.title.toLowerCase()}
                   </Link>
-                </div>
+                )}
               </article>
             </Reveal>
           ))}

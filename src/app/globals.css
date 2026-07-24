@@ -1,20 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --mist: #f4f7fc;
-  --paper: #ffffff;
-  --ink: #0a1b33;
-  --ink-soft: #3a4f6b;
-  --muted: #6b7c93;
-  --teal: #12b886;
-  --teal-deep: #0e9a70;
-  --forest: #071526;
-  --brass: #22c55e;
-  --line: #d5deeb;
-  --glow: rgba(18, 184, 134, 0.16);
-  --navy: #0a1b33;
-  --navy-mid: #122a4a;
-  --background: var(--mist);
+  --ink: #10241f;
+  --ink-soft: #3d5a52;
+  --muted: #6b8179;
+  --paper: #f3f7f5;
+  --surface: #ffffff;
+  --line: #d5e3dd;
+  --deep: #06332c;
+  --deep-mid: #0a4a40;
+  --teal: #0f766e;
+  --teal-bright: #14b8a6;
+  --sand: #e8f0ec;
+  --glow: rgba(20, 184, 166, 0.18);
+  --background: var(--paper);
   --foreground: var(--ink);
 }
 
@@ -35,16 +34,16 @@ html {
 
 body {
   background:
-    radial-gradient(ellipse 70% 45% at 0% 0%, rgba(18, 184, 134, 0.12), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 5%, rgba(10, 27, 51, 0.08), transparent 50%),
-    linear-gradient(180deg, #f4f7fc 0%, #ffffff 42%, #eef3f9 100%);
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(15, 118, 110, 0.14), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(6, 51, 44, 0.08), transparent 50%),
+    linear-gradient(180deg, #eef5f2 0%, #f7faf8 40%, #eef3f1 100%);
   color: var(--ink);
   font-family: var(--font-body), system-ui, sans-serif;
   min-height: 100vh;
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--teal) 32%, white);
+  background: color-mix(in oklab, var(--teal-bright) 35%, white);
   color: var(--ink);
 }
 
@@ -54,19 +53,18 @@ body {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
-  background: var(--navy);
+  background: var(--deep);
   color: #ffffff;
   padding: 0.9rem 1.5rem;
   font-size: 0.95rem;
   letter-spacing: 0.02em;
   font-weight: 500;
   transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 12px 32px rgba(7, 21, 38, 0.22);
+  box-shadow: 0 14px 34px rgba(6, 51, 44, 0.28);
 }
 
 .btn-primary:hover {
   background: var(--teal);
-  box-shadow: 0 12px 32px rgba(18, 184, 134, 0.28);
   transform: translateY(-1px);
 }
 
@@ -81,7 +79,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--navy) 18%, transparent);
+  border: 1px solid color-mix(in oklab, var(--deep) 20%, transparent);
   color: var(--ink);
   padding: 0.9rem 1.5rem;
   font-size: 0.95rem;
@@ -91,7 +89,7 @@ body {
 
 .btn-ghost:hover {
   border-color: var(--teal);
-  color: var(--teal-deep);
+  color: var(--teal);
   background: rgba(255, 255, 255, 0.7);
 }
 
@@ -102,8 +100,8 @@ body {
 }
 
 .field span {
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -114,7 +112,7 @@ body {
   width: 100%;
   border: 1px solid var(--line);
   background: #ffffff;
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
   padding: 0.85rem 1rem;
   color: var(--ink);
   outline: none;
@@ -126,6 +124,25 @@ body {
 .field textarea:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px var(--glow);
+}
+
+.visit-card {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.visit-card:hover {
+  border-color: color-mix(in oklab, var(--teal) 45%, var(--line));
+}
+
+.visit-card.active {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--glow);
+  transform: translateY(-1px);
 }
 
 .reveal {
@@ -199,7 +216,7 @@ body {
 }
 
 .display {
-  font-family: var(--font-display), system-ui, sans-serif;
+  font-family: var(--font-display), Georgia, serif;
   letter-spacing: -0.03em;
   line-height: 1.05;
   font-weight: 600;

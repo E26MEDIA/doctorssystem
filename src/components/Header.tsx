@@ -36,7 +36,7 @@ export function Header({ brand }: { brand: Brand }) {
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
         scrolled || open
-          ? "border-b border-[var(--line)] bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgba(10,27,51,0.06)]"
+          ? "border-b border-[var(--line)] bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgba(6,51,44,0.06)]"
           : "bg-transparent"
       }`}
     >
@@ -45,18 +45,18 @@ export function Header({ brand }: { brand: Brand }) {
           <span
             className={`font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight transition-colors ${
               overHero
-                ? "text-white group-hover:text-[var(--brass)]"
-                : "text-[var(--navy)] group-hover:text-[var(--teal)]"
+                ? "text-white group-hover:text-[var(--teal-bright)]"
+                : "text-[var(--deep)] group-hover:text-[var(--teal)]"
             }`}
           >
-            {brand.name}
+            {brand.doctor.replace(/^Dr\.\s*/, "Dr. ")}
           </span>
           <span
-            className={`mt-1 text-[11px] uppercase tracking-[0.22em] ${
+            className={`mt-1 text-[11px] uppercase tracking-[0.18em] ${
               overHero ? "text-white/65" : "text-[var(--muted)]"
             }`}
           >
-            {brand.doctor}
+            Surgical Gastroenterology
           </span>
         </Link>
 
@@ -70,7 +70,7 @@ export function Header({ brand }: { brand: Brand }) {
                 className={`text-sm tracking-wide transition-colors ${
                   overHero
                     ? active
-                      ? "text-[var(--brass)]"
+                      ? "text-[var(--teal-bright)]"
                       : "text-white/80 hover:text-white"
                     : active
                       ? "text-[var(--teal)]"
@@ -85,11 +85,11 @@ export function Header({ brand }: { brand: Brand }) {
             href="/book"
             className={`btn-primary !px-5 !py-2.5 text-sm ${
               overHero
-                ? "!bg-[var(--brass)] !text-[var(--navy)] hover:!bg-white"
+                ? "!bg-[var(--teal-bright)] !text-[var(--deep)]"
                 : ""
             }`}
           >
-            Request visit
+            Book visit
           </Link>
         </nav>
 
@@ -101,18 +101,18 @@ export function Header({ brand }: { brand: Brand }) {
         >
           <span
             className={`absolute h-0.5 w-5 transition ${
-              overHero ? "bg-white" : "bg-[var(--ink)]"
-            } ${open ? "translate-y-0 rotate-45 !bg-[var(--ink)]" : "-translate-y-1.5"}`}
+              overHero && !open ? "bg-white" : "bg-[var(--ink)]"
+            } ${open ? "translate-y-0 rotate-45" : "-translate-y-1.5"}`}
           />
           <span
             className={`absolute h-0.5 w-5 transition ${
-              overHero ? "bg-white" : "bg-[var(--ink)]"
+              overHero && !open ? "bg-white" : "bg-[var(--ink)]"
             } ${open ? "opacity-0" : "opacity-100"}`}
           />
           <span
             className={`absolute h-0.5 w-5 transition ${
-              overHero ? "bg-white" : "bg-[var(--ink)]"
-            } ${open ? "translate-y-0 -rotate-45 !bg-[var(--ink)]" : "translate-y-1.5"}`}
+              overHero && !open ? "bg-white" : "bg-[var(--ink)]"
+            } ${open ? "translate-y-0 -rotate-45" : "translate-y-1.5"}`}
           />
         </button>
       </div>
@@ -133,7 +133,7 @@ export function Header({ brand }: { brand: Brand }) {
             </Link>
           ))}
           <Link href="/book" className="btn-primary mt-2 text-center">
-            Request visit
+            Book visit
           </Link>
         </nav>
       </div>

@@ -15,8 +15,10 @@ model Appointment {
   date      String
   time      String
   service   String
+  visitType String   @default("clinic-consultation")
+  meetLink  String?
   notes     String?
-  status    String   @default("pending")
+  status    String   @default("confirmed")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -49,8 +51,8 @@ model ClinicSettings {
   bookingEnabled   Boolean  @default(true)
   minLeadDays      Int      @default(1)
   maxAdvanceDays   Int      @default(60)
-  autoConfirm      Boolean  @default(false)
-  confirmationNote String   @default("We will confirm your appointment within one business day.")
+  autoConfirm      Boolean  @default(true)
+  confirmationNote String   @default("Your appointment is confirmed. You and the doctor will receive email details for this slot.")
   notifyEmail      String   @default("")
   notifyOnBooking  Boolean  @default(true)
   notifyOnContact  Boolean  @default(true)

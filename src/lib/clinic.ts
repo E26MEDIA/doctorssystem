@@ -1,143 +1,200 @@
 export const clinic = {
-  name: "Meridian Health",
-  doctor: "Dr. Anika Rao",
-  credentials: "MD, Internal Medicine",
-  tagline: "Thoughtful medicine for a longer, clearer life.",
-  phone: "+91 80 4567 8901",
-  email: "care@meridianhealth.clinic",
+  name: "Honnani GI Surgery",
+  doctor: "Dr. Sharath S. Honnani",
+  credentials: "MBBS, MS (General Surgery), Fellowship in Surgical Gastroenterology",
+  tagline: "Advanced laparoscopic & gastrointestinal surgery with clear, confident care.",
+  phone: "+91 824 220 4668",
+  email: "care@drhonnani.com",
   address: {
-    line1: "42, 12th Main Road",
-    line2: "Indiranagar, Bengaluru 560038",
+    line1: "Yenepoya Specialty Hospital",
+    line2: "Kodialbail, Mangaluru, Karnataka 575003",
   },
   hours: [
-    { day: "Monday – Friday", time: "9:00 AM – 6:00 PM" },
-    { day: "Saturday", time: "9:00 AM – 1:00 PM" },
-    { day: "Sunday", time: "Closed" },
+    { day: "Monday – Saturday", time: "10:00 AM – 5:00 PM" },
+    { day: "Sunday", time: "By appointment" },
   ],
   social: {
-    instagram: "https://instagram.com",
-    linkedin: "https://linkedin.com",
+    instagram: "https://www.instagram.com/dr.honnani/",
+    linkedin: "https://www.yenepoyahospital.com/dr-s-s-honnani/",
   },
+} as const;
+
+export const doctorProfile = {
+  shortName: "Dr. Honnani",
+  role: "Visiting Consultant Surgical Gastroenterologist",
+  hospital: "Yenepoya Specialty Hospital",
+  bio: [
+    "Dr. Sharath S. Honnani is a Surgical Gastroenterologist experienced in advanced laparoscopic colorectal, bariatric, and hepato-pancreato-biliary surgery.",
+    "He worked with KMC Manipal for six years in Gastrointestinal and General Surgery, later joined BGS Gleneagles Global Hospitals, Bengaluru, and has been associated with Yenepoya Specialty Hospital since June 2019.",
+  ],
+  education: [
+    { title: "MBBS", detail: "Bachelor of Medicine & Bachelor of Surgery" },
+    { title: "MS (General Surgery)", detail: "Postgraduate surgical training" },
+    {
+      title: "Fellowship in Surgical Gastroenterology",
+      detail: "Advanced GI & HPB surgical fellowship",
+    },
+  ],
+  experience: [
+    {
+      place: "KMC Manipal",
+      detail: "6 years in Gastrointestinal and General Surgery",
+    },
+    {
+      place: "BGS Gleneagles Global Hospitals, Bengaluru",
+      detail: "Surgical Gastroenterology practice",
+    },
+    {
+      place: "Yenepoya Specialty Hospital",
+      detail: "Visiting Consultant since June 2019",
+    },
+  ],
+  expertise: [
+    "Advanced laparoscopic & minimally invasive surgery",
+    "Bariatric surgery",
+    "Liver resections",
+    "Pancreatic surgeries",
+    "Advanced laparoscopic colorectal surgery",
+    "Complicated hernias & abdominal wall reconstruction",
+    "Cadaveric and live-donor liver transplantation",
+    "Pancreatic transplantation",
+  ],
 } as const;
 
 export const services = [
   {
-    slug: "annual-physical",
-    title: "Annual Physical",
+    slug: "clinic-consultation",
+    title: "Clinic Consultation",
     summary:
-      "A full systems review with labs, risk scoring, and a clear plan for the year ahead.",
-    duration: "60 min",
+      "In-person visit at the hospital clinic for assessment, second opinion, and surgical planning.",
+    duration: "30–45 min",
     details:
-      "Includes vitals, cardiovascular screening, metabolic panel review, lifestyle assessment, and written recommendations you can act on immediately.",
+      "Face-to-face consultation with review of history, reports, and next-step guidance. Ideal for new complaints, pre-operative discussion, and follow-up after surgery.",
   },
   {
-    slug: "preventive-care",
-    title: "Preventive Care",
+    slug: "virtual-consultation",
+    title: "Virtual Consultation",
     summary:
-      "Screenings and guidance designed to catch issues early — before they become crises.",
-    duration: "45 min",
+      "Secure video visit from home. A Google Meet link is shared as soon as you book.",
+    duration: "20–30 min",
     details:
-      "Age-appropriate cancer screening, vaccination review, bone and heart health checks, and personalized prevention timelines.",
+      "Best for report review, second opinions, post-op check-ins, and questions that do not need a physical exam. Join from your phone or laptop at the booked time.",
   },
   {
-    slug: "chronic-disease",
-    title: "Chronic Disease Management",
+    slug: "laparoscopic-surgery",
+    title: "Advanced Laparoscopic Surgery",
     summary:
-      "Steady, collaborative care for hypertension, diabetes, thyroid, and metabolic conditions.",
-    duration: "45 min",
+      "Minimally invasive procedures focused on faster recovery and precise care.",
+    duration: "Procedure",
     details:
-      "Medication optimization, home monitoring plans, nutrition coaching, and quarterly progress reviews with measurable goals.",
+      "Includes advanced laparoscopic colorectal work and other minimally invasive GI procedures tailored after clinical evaluation.",
   },
   {
-    slug: "womens-health",
-    title: "Women’s Health",
+    slug: "bariatric-surgery",
+    title: "Bariatric Surgery",
     summary:
-      "Hormone health, midlife transitions, and reproductive wellness with space to ask anything.",
-    duration: "45 min",
+      "Surgical weight-management pathways with careful counselling and follow-through.",
+    duration: "Procedure",
     details:
-      "Perimenopause support, PCOS guidance, bone density counseling, and coordinated referrals when specialty care is needed.",
+      "Evaluation, procedure planning, and long-term metabolic follow-up for eligible patients seeking structured bariatric care.",
   },
   {
-    slug: "executive-checkup",
-    title: "Executive Checkup",
+    slug: "hpb-surgery",
+    title: "Liver & Pancreas Surgery",
     summary:
-      "A deep dive for busy professionals who want clarity without wasted time.",
-    duration: "90 min",
+      "Hepato-pancreato-biliary surgery including complex resections when indicated.",
+    duration: "Procedure",
     details:
-      "Expanded labs, stress and sleep assessment, cardiovascular risk modeling, and a same-day summary you can take to work.",
+      "Specialist assessment for liver resections, pancreatic surgeries, and related GI oncology pathways.",
   },
   {
-    slug: "teleconsult",
-    title: "Video Consult",
+    slug: "hernia-reconstruction",
+    title: "Hernia & Abdominal Wall Repair",
     summary:
-      "Follow-ups and second opinions from home when an in-clinic visit isn’t required.",
-    duration: "30 min",
+      "Care for complicated hernias and abdominal wall reconstruction.",
+    duration: "Procedure",
     details:
-      "Secure video visits for medication reviews, lab discussions, travel advice, and acute but non-emergency concerns.",
+      "From complex hernia repair to reconstruction planning after prior surgeries, with clear risk discussion and recovery guidance.",
   },
 ] as const;
 
 export const timeSlots = [
-  "09:00",
-  "09:30",
   "10:00",
   "10:30",
   "11:00",
   "11:30",
   "12:00",
+  "12:30",
   "14:00",
   "14:30",
   "15:00",
   "15:30",
   "16:00",
   "16:30",
-  "17:00",
 ] as const;
 
 export const testimonials = [
   {
     quote:
-      "Dr. Rao listens like she has all the time in the world — then gives you a plan that actually fits your life.",
-    name: "Priya M.",
-    detail: "Patient since 2021",
+      "Dr. Honnani explained my laparoscopic options in plain language. I felt prepared before surgery and supported after.",
+    name: "Ramesh K.",
+    detail: "Clinic consultation patient",
   },
   {
     quote:
-      "The executive checkup caught a blood pressure pattern I’d been ignoring. Calm, precise, no scare tactics.",
-    name: "Arjun K.",
-    detail: "Patient since 2023",
+      "The virtual consult saved a long trip. Reports were reviewed carefully and the Meet link worked on time.",
+    name: "Aisha P.",
+    detail: "Virtual consultation patient",
   },
   {
     quote:
-      "I finally understand my labs. Meridian made medicine feel collaborative instead of confusing.",
-    name: "Neha S.",
-    detail: "Patient since 2022",
+      "Clear plan for a complicated hernia repair. Professional, calm, and thorough from first visit to recovery.",
+    name: "Suresh M.",
+    detail: "Surgical patient",
   },
 ] as const;
 
 export const articles = [
   {
-    slug: "reading-your-bloodwork",
-    title: "How to actually read your bloodwork",
+    slug: "when-to-see-a-gi-surgeon",
+    title: "When to see a surgical gastroenterologist",
+    category: "Guidance",
     excerpt:
-      "What CRP, HbA1c, and lipid panels really tell you — and which numbers deserve a follow-up.",
-    date: "2026-03-12",
-    readTime: "6 min",
-  },
-  {
-    slug: "sleep-before-supplements",
-    title: "Sleep before supplements",
-    excerpt:
-      "Why fixing your nights often outperforms any new bottle on your bathroom shelf.",
-    date: "2026-02-04",
+      "Gallbladder pain, hernias, unexplained weight loss, and other signs that deserve specialist review.",
+    publishedAt: "2026-05-10",
     readTime: "5 min",
+    body: [
+      "Persistent upper abdominal pain after meals, a noticeable hernia bulge, unexplained weight loss, or jaundice should not be ignored. These can point to gallbladder disease, colorectal issues, or hepato-pancreato-biliary conditions that benefit from specialist review.",
+      "A surgical gastroenterologist evaluates whether medical management is enough or whether laparoscopic or open surgery is the safer path. Bring prior reports, imaging CDs, and a medication list to your first visit — clinic or virtual.",
+      "If symptoms are sudden and severe (intense pain, vomiting blood, high fever, inability to pass stool or gas), seek emergency care first, then arrange follow-up with the surgical team.",
+    ],
   },
   {
-    slug: "midlife-checkups",
-    title: "The midlife checkup that matters",
+    slug: "laparoscopic-recovery",
+    title: "Recovering after laparoscopic surgery",
+    category: "Recovery",
     excerpt:
-      "A practical checklist for ages 40–55: heart, hormones, bone, and cancer screening.",
-    date: "2026-01-18",
-    readTime: "7 min",
+      "What the first two weeks usually look like — walking, diet, wound care, and when to call.",
+    publishedAt: "2026-04-02",
+    readTime: "6 min",
+    body: [
+      "Most patients walk the same day or next morning after laparoscopic GI surgery. Short walks reduce clotting risk and help the gut wake up. Rest when tired, but avoid long bed rest.",
+      "Diet usually starts light — clear fluids, then soft foods — as advised for your specific procedure. Wound sites should stay clean and dry; mild bruising around ports is common.",
+      "Call the clinic if you develop fever, increasing redness or discharge at a port site, severe pain not eased by prescribed medicine, persistent vomiting, or shortness of breath.",
+    ],
+  },
+  {
+    slug: "virtual-vs-clinic",
+    title: "Virtual visit or clinic visit?",
+    category: "Consultations",
+    excerpt:
+      "A simple guide to choosing the right consultation type for your reports and symptoms.",
+    publishedAt: "2026-03-18",
+    readTime: "4 min",
+    body: [
+      "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. You will receive a Google Meet link as soon as the open slot is booked.",
+      "Choose a clinic consultation for new abdominal findings, hernia assessment, pre-operative planning that needs examination, or when dressing changes and in-person counselling matter.",
+      "Either way, pick only an open slot from the doctor’s weekly schedule. Available slots confirm instantly — no waiting for a second approval step.",
+    ],
   },
 ] as const;

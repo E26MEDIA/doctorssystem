@@ -68,9 +68,9 @@ export function defaultsConfig(): ClinicConfig {
     bookingEnabled: true,
     minLeadDays: 1,
     maxAdvanceDays: 60,
-    autoConfirm: false,
+    autoConfirm: true,
     confirmationNote:
-      "We will confirm your appointment within one business day.",
+      "Your appointment is confirmed. You and the doctor will receive email details for this slot.",
     notifyEmail: defaultClinic.email,
     notifyOnBooking: true,
     notifyOnContact: true,
@@ -89,46 +89,50 @@ function parseJson<T>(value: string, fallback: T): T {
 
 export async function ensureClinicSettings() {
   const d = defaultsConfig();
+  const payload = {
+    clinicName: d.name,
+    doctorName: d.doctor,
+    credentials: d.credentials,
+    tagline: d.tagline,
+    phone: d.phone,
+    email: d.email,
+    addressLine1: d.address.line1,
+    addressLine2: d.address.line2,
+    instagram: d.social.instagram,
+    linkedin: d.social.linkedin,
+    hoursJson: JSON.stringify(d.hours),
+    timeSlotsJson: JSON.stringify(d.timeSlots),
+    bookingEnabled: d.bookingEnabled,
+    minLeadDays: d.minLeadDays,
+    maxAdvanceDays: d.maxAdvanceDays,
+    autoConfirm: d.autoConfirm,
+    confirmationNote: d.confirmationNote,
+    notifyEmail: d.notifyEmail,
+    notifyOnBooking: d.notifyOnBooking,
+    notifyOnContact: d.notifyOnContact,
+    emergencyNote: d.emergencyNote,
+  };
   return prisma.clinicSettings.upsert({
     where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      clinicName: d.name,
-      doctorName: d.doctor,
-      credentials: d.credentials,
-      tagline: d.tagline,
-      phone: d.phone,
-      email: d.email,
-      addressLine1: d.address.line1,
-      addressLine2: d.address.line2,
-      instagram: d.social.instagram,
-      linkedin: d.social.linkedin,
-      hoursJson: JSON.stringify(d.hours),
-      timeSlotsJson: JSON.stringify(d.timeSlots),
-      bookingEnabled: d.bookingEnabled,
-      minLeadDays: d.minLeadDays,
-      maxAdvanceDays: d.maxAdvanceDays,
-      autoConfirm: d.autoConfirm,
-      confirmationNote: d.confirmationNote,
-      notifyEmail: d.notifyEmail,
-      notifyOnBooking: d.notifyOnBooking,
-      notifyOnContact: d.notifyOnContact,
-      emergencyNote: d.emergencyNote,
-    },
+    update: payload,
+    create: { id: "default", ...payload },
   });
 }
 
 export async function ensureServices() {
-  const existing = await prisma.serviceOffering.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
-  if (existing.length > 0) return existing;
+  const defaultSlugs = new Set<string>(defaultServices.map((s) => s.slug));
 
   for (const [i, s] of defaultServices.entries()) {
     await prisma.serviceOffering.upsert({
       where: { slug: s.slug },
-      update: {},
+      update: {
+        title: s.title,
+        summary: s.summary,
+        details: s.details,
+        duration: s.duration,
+        active: true,
+        sortOrder: i,
+      },
       create: {
         slug: s.slug,
         title: s.title,
@@ -138,6 +142,18 @@ export async function ensureServices() {
         active: true,
         sortOrder: i,
       },
+    });
+  }
+
+  const existing = await prisma.serviceOffering.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const stale = existing.filter((row) => !defaultSlugs.has(row.slug));
+  if (stale.length) {
+    await prisma.serviceOffering.updateMany({
+      where: { slug: { in: stale.map((s) => s.slug) } },
+      data: { active: false },
     });
   }
 
