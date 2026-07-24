@@ -3,51 +3,96 @@ import type { ClinicConfig } from "@/lib/settings";
 
 export function Footer({ clinic }: { clinic: ClinicConfig }) {
   return (
-    <footer className="mt-auto border-t border-white/10 bg-[var(--navy)] text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3 md:px-8">
-        <div>
-          <p className="font-[family-name:var(--font-display)] text-3xl">
-            {clinic.name}
+    <footer className="mt-auto border-t border-[var(--line)] bg-[var(--deep)] text-[rgba(232,241,237,0.88)]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-4 md:px-8">
+        <div className="md:col-span-1">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--teal-bright)]">
+            Surgical gastroenterology
           </p>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/70">
+          <h3 className="display mt-3 text-2xl text-white">{clinic.doctor}</h3>
+          <p className="mt-3 max-w-[34ch] text-sm leading-relaxed text-white/65">
             {clinic.tagline}
           </p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--brass)]">
-            Visit
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-white/80">
+          <h4 className="text-sm font-medium text-white">Visit</h4>
+          <p className="mt-3 text-sm leading-8 text-white/65">
             {clinic.address.line1}
             <br />
             {clinic.address.line2}
+            <br />
+            {clinic.hours.map((h) => (
+              <span key={h.day}>
+                {h.day}: {h.time}
+                <br />
+              </span>
+            ))}
           </p>
-          <p className="mt-4 text-sm text-white/80">{clinic.phone}</p>
-          <p className="text-sm text-white/80">{clinic.email}</p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--brass)]">
-            Hours
+          <h4 className="text-sm font-medium text-white">Contact</h4>
+          <p className="mt-3 text-sm leading-8 text-white/65">
+            <a href={`tel:${clinic.phone}`} className="hover:text-[var(--teal-bright)]">
+              {clinic.phone}
+            </a>
+            <br />
+            <a href={`mailto:${clinic.email}`} className="hover:text-[var(--teal-bright)]">
+              {clinic.email}
+            </a>
+            <br />
+            <a
+              href={clinic.social.instagram}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--teal-bright)]"
+            >
+              Instagram @dr.honnani
+            </a>
+            <br />
+            <a
+              href={clinic.social.linkedin}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--teal-bright)]"
+            >
+              Yenepoya hospital profile
+            </a>
           </p>
-          <ul className="mt-3 space-y-2 text-sm text-white/80">
-            {clinic.hours.map((h) => (
-              <li key={h.day} className="flex justify-between gap-4">
-                <span>{h.day}</span>
-                <span>{h.time}</span>
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/book"
-            className="mt-6 inline-block text-sm text-[var(--brass)] underline-offset-4 hover:underline"
-          >
-            Book an appointment →
-          </Link>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium text-white">Pages</h4>
+          <div className="mt-3 grid gap-2 text-sm text-white/65">
+            <Link href="/about" className="hover:text-[var(--teal-bright)]">
+              About
+            </Link>
+            <Link href="/services" className="hover:text-[var(--teal-bright)]">
+              Services
+            </Link>
+            <Link href="/gallery" className="hover:text-[var(--teal-bright)]">
+              Gallery
+            </Link>
+            <Link href="/journal" className="hover:text-[var(--teal-bright)]">
+              Journal
+            </Link>
+            <Link href="/#book" className="hover:text-[var(--teal-bright)]">
+              Book appointment
+            </Link>
+            <Link href="/contact" className="hover:text-[var(--teal-bright)]">
+              Contact
+            </Link>
+            <Link href="/admin" className="hover:text-[var(--teal-bright)]">
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
-      <div className="border-t border-white/10 px-5 py-5 text-center text-xs text-white/45 md:px-8">
-        © {new Date().getFullYear()} {clinic.name}. Care by {clinic.doctor}.{" "}
-        {clinic.emergencyNote}
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between md:px-8">
+          <span>
+            © {new Date().getFullYear()} {clinic.doctor}. All rights reserved.
+          </span>
+          <span>Clinic · Virtual · Instant slot confirmation</span>
+        </div>
       </div>
     </footer>
   );

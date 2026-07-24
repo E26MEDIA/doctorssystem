@@ -1,32 +1,34 @@
 import type { Metadata } from "next";
-import { Outfit, Manrope } from "next/font/google";
+import { Newsreader, Sora } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { getClinicConfig } from "@/lib/settings";
 import "./globals.css";
 
-const display = Outfit({
+const display = Newsreader({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+  display: "swap",
 });
 
-const body = Manrope({
+const body = Sora({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
   const clinic = await getClinicConfig();
   return {
     title: {
-      default: `${clinic.name} — ${clinic.doctor}`,
+      default: `${clinic.doctor} — Surgical Gastroenterologist`,
       template: `%s · ${clinic.name}`,
     },
     description: clinic.tagline,
     openGraph: {
-      title: `${clinic.name} — ${clinic.doctor}`,
+      title: `${clinic.doctor} — ${clinic.name}`,
       description: clinic.tagline,
       type: "website",
     },
