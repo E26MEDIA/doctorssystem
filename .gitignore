@@ -50,3 +50,8 @@ prisma/*.db
 prisma/*.db-journal
 *.db
 *.db-journal
+
+cloudflared
+cf-tunnel.log
+*.log
+
