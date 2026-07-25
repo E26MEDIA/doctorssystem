@@ -8,14 +8,23 @@ type Props = {
   delay?: number;
 };
 
+/** Soft motion only — content is always readable (no opacity trap). */
 export function Reveal({ children, className = "", delay = 0 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof IntersectionObserver === "undefined") return;
 
+    // Already on screen → keep visible
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setVisible(true);
+      return;
+    }
+
+    setVisible(false);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -23,11 +32,14 @@ export function Reveal({ children, className = "", delay = 0 }: Props) {
           observer.disconnect();
         }
       },
-      { threshold: 0.15 },
+      { threshold: 0.08, rootMargin: "80px 0px" },
     );
-
     observer.observe(el);
-    return () => observer.disconnect();
+    const t = window.setTimeout(() => setVisible(true), 400);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(t);
+    };
   }, []);
 
   return (
