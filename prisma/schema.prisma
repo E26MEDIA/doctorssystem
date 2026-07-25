@@ -3,8 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Non-pooled URL for migrations (Neon/Vercel). Locally, use the same as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 model Appointment {
