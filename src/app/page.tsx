@@ -18,7 +18,7 @@ export default async function HomePage() {
   return (
     <>
       {/* 1. Hero */}
-      <section className="relative min-h-[100svh] overflow-hidden">
+      <section id="hero" className="relative min-h-[100svh] overflow-hidden">
         <div className="absolute inset-0">
           <Image
             src="/images/hero.jpg"
