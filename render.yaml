@@ -1,4 +1,4 @@
-# Honnani GI — frontend + API + admin on one Render web service
+# Full-stack deploy: public site + booking API + /admin
 databases:
   - name: honnani-db
     plan: free
