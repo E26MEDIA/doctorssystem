@@ -6,7 +6,7 @@ services:
     region: oregon
     branch: cursor/client-demo-hosting-437b
     autoDeploy: true
-    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npx next build
+    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma db push --skip-generate && npx next build
     startCommand: npx next start --hostname 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
@@ -17,13 +17,11 @@ services:
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
       - key: DATABASE_URL
-        value: "postgres://20cc3517c667da4cccefe5dc60c49184ae7a353344f9415f107e07dbdec6947d:sk_-1kI1eW6J0HWPTqszlpB7@db.prisma.io:5432/postgres?sslmode=require"
-      - key: DIRECT_URL
-        value: "postgres://20cc3517c667da4cccefe5dc60c49184ae7a353344f9415f107e07dbdec6947d:sk_-1kI1eW6J0HWPTqszlpB7@db.prisma.io:5432/postgres?sslmode=require"
+        value: file:./prod.db
       - key: ADMIN_PASSWORD
         value: Demo@12345
       - key: ADMIN_SECRET
-        value: honnani-prod-secret-xk9m2p7q4w8n5r1t6y3u0v2b-32chars
+        value: meridian-health-prod-secret-xk9m2p7q4w8n5r1t6y3u0v2b
       - key: NEXT_PUBLIC_CLINIC_NAME
         value: Honnani GI Surgery
       - key: NEXT_PUBLIC_DOCTOR_NAME
