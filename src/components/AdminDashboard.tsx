@@ -1,7 +1,12 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { ClinicConfig, HourRow, ServiceItem } from "@/lib/settings";
+import type {
+  ClinicConfig,
+  HourRow,
+  ServiceItem,
+  WeeklyScheduleRow,
+} from "@/lib/settings";
 
 type Appointment = {
   id: string;
@@ -58,6 +63,20 @@ const emptySettings = (): ClinicConfig => ({
   hours: [{ day: "Monday – Friday", time: "9:00 AM – 6:00 PM" }],
   social: { instagram: "", linkedin: "" },
   timeSlots: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
+  weeklySchedule: [
+    { dayKey: "monday", label: "Monday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "tuesday", label: "Tuesday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    {
+      dayKey: "wednesday",
+      label: "Wednesday",
+      enabled: true,
+      slots: ["11:00", "12:00", "16:00"],
+    },
+    { dayKey: "thursday", label: "Thursday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "friday", label: "Friday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "saturday", label: "Saturday", enabled: true, slots: ["11:00", "12:00"] },
+    { dayKey: "sunday", label: "Sunday", enabled: false, slots: [] },
+  ],
   bookingEnabled: true,
   minLeadDays: 1,
   maxAdvanceDays: 60,
@@ -146,7 +165,6 @@ export function AdminDashboard() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const [slotsText, setSlotsText] = useState("");
 
   const [serviceDraft, setServiceDraft] = useState<ServiceItem>({
     slug: "",
@@ -178,7 +196,6 @@ export function AdminDashboard() {
     setAppointments(data.appointments ?? []);
     setMessages(data.messages ?? []);
     setSettings(data.settings ?? emptySettings());
-    setSlotsText((data.settings?.timeSlots ?? []).join("\n"));
     setServices(data.services ?? []);
     setBlockedDates(data.blockedDates ?? []);
     setAuthed(true);
@@ -243,13 +260,7 @@ export function AdminDashboard() {
   async function saveSettings(next?: ClinicConfig) {
     setSaving(true);
     setSaveMsg("");
-    const payload = next ?? {
-      ...settings,
-      timeSlots: slotsText
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean),
-    };
+    const payload = next ?? settings;
     const res = await fetch("/api/admin/data", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -262,7 +273,6 @@ export function AdminDashboard() {
       return;
     }
     setSettings(data.settings);
-    setSlotsText(data.settings.timeSlots.join("\n"));
     setSaveMsg("Saved successfully");
   }
 
@@ -366,6 +376,27 @@ export function AdminDashboard() {
     setSettings((s) => ({
       ...s,
       hours: s.hours.map((h, i) => (i === index ? { ...h, [key]: value } : h)),
+    }));
+  }
+
+  function updateWeeklyDay(
+    dayKey: WeeklyScheduleRow["dayKey"],
+    patch: Partial<WeeklyScheduleRow>,
+  ) {
+    setSettings((s) => ({
+      ...s,
+      weeklySchedule: s.weeklySchedule.map((row) =>
+        row.dayKey === dayKey ? { ...row, ...patch } : row,
+      ),
+      timeSlots: Array.from(
+        new Set(
+          s.weeklySchedule
+            .map((row) =>
+              row.dayKey === dayKey ? { ...row, ...patch } : row,
+            )
+            .flatMap((row) => (row.enabled ? row.slots : [])),
+        ),
+      ).sort(),
     }));
   }
 
@@ -978,6 +1009,10 @@ export function AdminDashboard() {
       {tab === "booking" && (
         <div className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8">
           <h2 className="display text-3xl">Booking settings</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Set exactly when the doctor is available each day. Once a patient books
+            a time, that slot is automatically locked for everyone else.
+          </p>
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             <label className="flex items-center gap-3 text-sm md:col-span-2">
               <input
@@ -1045,15 +1080,68 @@ export function AdminDashboard() {
                 }
               />
             </label>
-            <label className="field md:col-span-2">
-              <span>Time slots (one per line, HH:MM)</span>
-              <textarea
-                rows={8}
-                value={slotsText}
-                onChange={(e) => setSlotsText(e.target.value)}
-                placeholder={"09:00\n09:30\n10:00"}
-              />
-            </label>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
+            <h3 className="text-lg font-semibold text-[var(--deep)]">
+              Weekly consultation schedule
+            </h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Example: if the doctor is only in clinic after 11:00 AM, add only
+              those timings for that day. Leave a day off if he is unavailable.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              {settings.weeklySchedule.map((row) => (
+                <div
+                  key={row.dayKey}
+                  className="rounded-xl border border-[var(--line)] bg-white p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-[var(--deep)]">{row.label}</p>
+                      <p className="text-sm text-[var(--muted)]">
+                        {row.enabled
+                          ? row.slots.length
+                            ? `${row.slots.length} consultation slot${row.slots.length > 1 ? "s" : ""}`
+                            : "Available, but no slots added yet"
+                          : "Doctor unavailable"}
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-[var(--ink-soft)]">
+                      <input
+                        type="checkbox"
+                        checked={row.enabled}
+                        onChange={(e) =>
+                          updateWeeklyDay(row.dayKey, {
+                            enabled: e.target.checked,
+                          })
+                        }
+                      />
+                      Available this day
+                    </label>
+                  </div>
+
+                  <label className="field mt-4">
+                    <span>Consultation slots for {row.label} (one per line, HH:MM)</span>
+                    <textarea
+                      rows={4}
+                      disabled={!row.enabled}
+                      value={row.slots.join("\n")}
+                      onChange={(e) =>
+                        updateWeeklyDay(row.dayKey, {
+                          slots: e.target.value
+                            .split(/[\n,]+/)
+                            .map((slot) => slot.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder={"11:00\n11:30\n12:00\n16:00"}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
           <SaveBar
             saving={saving}

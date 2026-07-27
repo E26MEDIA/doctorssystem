@@ -8,6 +8,12 @@ import {
 } from "@/lib/clinic";
 
 export type HourRow = { day: string; time: string };
+export type WeeklyScheduleRow = {
+  dayKey: string;
+  label: string;
+  enabled: boolean;
+  slots: string[];
+};
 
 export type ClinicConfig = {
   name: string;
@@ -20,6 +26,7 @@ export type ClinicConfig = {
   hours: HourRow[];
   social: { instagram: string; linkedin: string };
   timeSlots: string[];
+  weeklySchedule: WeeklyScheduleRow[];
   bookingEnabled: boolean;
   minLeadDays: number;
   maxAdvanceDays: number;
@@ -47,6 +54,25 @@ const defaultHours: HourRow[] = defaultClinic.hours.map((h) => ({
   time: h.time,
 }));
 
+export const weekdayOptions = [
+  { dayKey: "monday", label: "Monday" },
+  { dayKey: "tuesday", label: "Tuesday" },
+  { dayKey: "wednesday", label: "Wednesday" },
+  { dayKey: "thursday", label: "Thursday" },
+  { dayKey: "friday", label: "Friday" },
+  { dayKey: "saturday", label: "Saturday" },
+  { dayKey: "sunday", label: "Sunday" },
+] as const;
+
+const defaultWeeklySchedule: WeeklyScheduleRow[] = weekdayOptions.map(
+  ({ dayKey, label }, index) => ({
+    dayKey,
+    label,
+    enabled: index < 6,
+    slots: [...defaultTimeSlots],
+  }),
+);
+
 export function defaultsConfig(): ClinicConfig {
   return {
     name: defaultClinic.name,
@@ -65,6 +91,10 @@ export function defaultsConfig(): ClinicConfig {
       linkedin: defaultClinic.social.linkedin,
     },
     timeSlots: [...defaultTimeSlots],
+    weeklySchedule: defaultWeeklySchedule.map((row) => ({
+      ...row,
+      slots: [...row.slots],
+    })),
     bookingEnabled: true,
     minLeadDays: 1,
     maxAdvanceDays: 60,
@@ -87,6 +117,21 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
+function normalizeWeeklySchedule(rows: WeeklyScheduleRow[] | null | undefined) {
+  const map = new Map((rows ?? []).map((row) => [row.dayKey, row]));
+  return weekdayOptions.map(({ dayKey, label }, index) => {
+    const existing = map.get(dayKey);
+    return {
+      dayKey,
+      label,
+      enabled: existing?.enabled ?? index < 6,
+      slots:
+        existing?.slots?.filter((slot) => /^\d{2}:\d{2}$/.test(slot)) ??
+        [...defaultTimeSlots],
+    };
+  });
+}
+
 export async function ensureClinicSettings() {
   const d = defaultsConfig();
   const payload = {
@@ -102,6 +147,7 @@ export async function ensureClinicSettings() {
     linkedin: d.social.linkedin,
     hoursJson: JSON.stringify(d.hours),
     timeSlotsJson: JSON.stringify(d.timeSlots),
+    weeklyScheduleJson: JSON.stringify(d.weeklySchedule),
     bookingEnabled: d.bookingEnabled,
     minLeadDays: d.minLeadDays,
     maxAdvanceDays: d.maxAdvanceDays,
@@ -196,6 +242,9 @@ export function rowToConfig(
       linkedin: row.linkedin,
     },
     timeSlots: parseJson<string[]>(row.timeSlotsJson, [...defaultTimeSlots]),
+    weeklySchedule: normalizeWeeklySchedule(
+      parseJson<WeeklyScheduleRow[]>(row.weeklyScheduleJson, defaultWeeklySchedule),
+    ),
     bookingEnabled: row.bookingEnabled,
     minLeadDays: row.minLeadDays,
     maxAdvanceDays: row.maxAdvanceDays,

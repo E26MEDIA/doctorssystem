@@ -33,6 +33,25 @@ function meetCodeFromSeed(seed: string) {
   return `${part(3)}-${part(4)}-${part(3)}`;
 }
 
+const dayKeyByIndex = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+function getSlotsForDate(config: Awaited<ReturnType<typeof getClinicConfig>>, date: string) {
+  const target = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return [];
+  const dayKey = dayKeyByIndex[target.getDay()];
+  const row = config.weeklySchedule.find((item) => item.dayKey === dayKey);
+  if (!row || !row.enabled) return [];
+  return row.slots;
+}
+
 export async function POST(request: Request) {
   try {
     if (!assertSameOrigin(request)) return forbiddenOrigin();
@@ -76,7 +95,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unknown service" }, { status: 400 });
     }
 
-    if (!config.timeSlots.includes(data.time)) {
+    const daySlots = getSlotsForDate(config, data.date);
+    if (!daySlots.includes(data.time)) {
       return NextResponse.json({ error: "Unavailable time slot" }, { status: 400 });
     }
 
@@ -192,12 +212,13 @@ export async function GET(request: Request) {
   ]);
 
   const isBlocked = blocked.some((b) => b.date === date);
+  const daySlots = getSlotsForDate(config, date);
 
   return NextResponse.json({
     booked: booked.map((b) => b.time),
     blocked: isBlocked,
     bookingEnabled: config.bookingEnabled,
-    timeSlots: config.timeSlots,
+    timeSlots: daySlots,
     minDate: format(addDays(new Date(), config.minLeadDays), "yyyy-MM-dd"),
     maxDate: format(addDays(new Date(), config.maxAdvanceDays), "yyyy-MM-dd"),
   });

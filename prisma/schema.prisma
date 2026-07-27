@@ -48,6 +48,7 @@ model ClinicSettings {
   linkedin         String   @default("")
   hoursJson        String
   timeSlotsJson    String
+  weeklyScheduleJson String @default("[]")
   bookingEnabled   Boolean  @default(true)
   minLeadDays      Int      @default(1)
   maxAdvanceDays   Int      @default(60)
