@@ -1,7 +1,12 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { ClinicConfig, HourRow, ServiceItem } from "@/lib/settings";
+import type {
+  ClinicConfig,
+  HourRow,
+  ServiceItem,
+  WeeklyScheduleRow,
+} from "@/lib/settings";
 
 type Appointment = {
   id: string;
@@ -11,6 +16,8 @@ type Appointment = {
   date: string;
   time: string;
   service: string;
+  visitType?: string;
+  meetLink?: string | null;
   notes: string | null;
   status: string;
   createdAt: string;
@@ -56,16 +63,149 @@ const emptySettings = (): ClinicConfig => ({
   hours: [{ day: "Monday – Friday", time: "9:00 AM – 6:00 PM" }],
   social: { instagram: "", linkedin: "" },
   timeSlots: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
+  weeklySchedule: [
+    { dayKey: "monday", label: "Monday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "tuesday", label: "Tuesday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    {
+      dayKey: "wednesday",
+      label: "Wednesday",
+      enabled: true,
+      slots: ["11:00", "12:00", "16:00"],
+    },
+    { dayKey: "thursday", label: "Thursday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "friday", label: "Friday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
+    { dayKey: "saturday", label: "Saturday", enabled: true, slots: ["11:00", "12:00"] },
+    { dayKey: "sunday", label: "Sunday", enabled: false, slots: [] },
+  ],
   bookingEnabled: true,
   minLeadDays: 1,
   maxAdvanceDays: 60,
-  autoConfirm: false,
+  autoConfirm: true,
   confirmationNote: "",
   notifyEmail: "",
   notifyOnBooking: true,
   notifyOnContact: true,
   emergencyNote: "",
 });
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+/** Convert "14:30" → "2:30 PM" */
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr.padStart(2, "0")} ${ampm}`;
+}
+
+/** All bookable slots throughout the day in 30-min increments */
+const ALL_SLOTS: string[] = Array.from({ length: 28 }, (_, i) => {
+  const totalMin = 7 * 60 + i * 30; // 7:00 AM to 8:30 PM
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
+// ── Weekly Schedule Editor ────────────────────────────────────────────────────
+
+function WeeklyScheduleEditor({
+  schedule,
+  onChange,
+}: {
+  schedule: WeeklyScheduleRow[];
+  onChange: (updated: WeeklyScheduleRow[]) => void;
+}) {
+  function updateDay(dayKey: string, patch: Partial<WeeklyScheduleRow>) {
+    onChange(
+      schedule.map((row) =>
+        row.dayKey === dayKey ? { ...row, ...patch } : row,
+      ),
+    );
+  }
+
+  function toggleSlot(dayKey: string, slot: string, currentSlots: string[]) {
+    const next = currentSlots.includes(slot)
+      ? currentSlots.filter((s) => s !== slot)
+      : [...currentSlots, slot].sort();
+    updateDay(dayKey, { slots: next });
+  }
+
+  return (
+    <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
+      <h3 className="text-lg font-semibold text-[var(--deep)]">
+        Weekly consultation schedule
+      </h3>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Toggle each day on/off. Tap a time card to add or remove that slot.
+        Booked slots are automatically locked once a patient confirms.
+      </p>
+
+      <div className="mt-5 space-y-4">
+        {schedule.map((row) => (
+          <div
+            key={row.dayKey}
+            className={`rounded-xl border bg-white p-4 transition-opacity ${
+              row.enabled ? "border-[var(--line)]" : "border-[var(--line)] opacity-60"
+            }`}
+          >
+            {/* Day header */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-[var(--deep)]">{row.label}</p>
+                <p className="text-sm text-[var(--muted)]">
+                  {row.enabled
+                    ? row.slots.length
+                      ? row.slots.map(to12h).join(" · ")
+                      : "No slots selected"
+                    : "Doctor unavailable"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateDay(row.dayKey, { enabled: !row.enabled })}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                  row.enabled
+                    ? "bg-[var(--teal)] text-white"
+                    : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
+                }`}
+              >
+                {row.enabled ? "Available" : "Off"}
+              </button>
+            </div>
+
+            {/* Slot cards grid */}
+            {row.enabled && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {ALL_SLOTS.map((slot) => {
+                  const active = row.slots.includes(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => toggleSlot(row.dayKey, slot, row.slots)}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                        active
+                          ? "border-[var(--teal)] bg-[var(--teal)] text-white shadow-sm"
+                          : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)] hover:text-[var(--teal)]"
+                      }`}
+                    >
+                      {to12h(slot)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function slugify(value: string) {
   return value
@@ -90,7 +230,7 @@ function TabButton({
       onClick={onClick}
       className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition ${
         active
-          ? "bg-[var(--navy)] text-white"
+          ? "bg-[var(--deep)] text-white"
           : "border border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
       }`}
     >
@@ -144,7 +284,6 @@ export function AdminDashboard() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const [slotsText, setSlotsText] = useState("");
 
   const [serviceDraft, setServiceDraft] = useState<ServiceItem>({
     slug: "",
@@ -176,7 +315,6 @@ export function AdminDashboard() {
     setAppointments(data.appointments ?? []);
     setMessages(data.messages ?? []);
     setSettings(data.settings ?? emptySettings());
-    setSlotsText((data.settings?.timeSlots ?? []).join("\n"));
     setServices(data.services ?? []);
     setBlockedDates(data.blockedDates ?? []);
     setAuthed(true);
@@ -241,13 +379,7 @@ export function AdminDashboard() {
   async function saveSettings(next?: ClinicConfig) {
     setSaving(true);
     setSaveMsg("");
-    const payload = next ?? {
-      ...settings,
-      timeSlots: slotsText
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean),
-    };
+    const payload = next ?? settings;
     const res = await fetch("/api/admin/data", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -260,7 +392,6 @@ export function AdminDashboard() {
       return;
     }
     setSettings(data.settings);
-    setSlotsText(data.settings.timeSlots.join("\n"));
     setSaveMsg("Saved successfully");
   }
 
@@ -367,6 +498,27 @@ export function AdminDashboard() {
     }));
   }
 
+  function updateWeeklyDay(
+    dayKey: WeeklyScheduleRow["dayKey"],
+    patch: Partial<WeeklyScheduleRow>,
+  ) {
+    setSettings((s) => ({
+      ...s,
+      weeklySchedule: s.weeklySchedule.map((row) =>
+        row.dayKey === dayKey ? { ...row, ...patch } : row,
+      ),
+      timeSlots: Array.from(
+        new Set(
+          s.weeklySchedule
+            .map((row) =>
+              row.dayKey === dayKey ? { ...row, ...patch } : row,
+            )
+            .flatMap((row) => (row.enabled ? row.slots : [])),
+        ),
+      ).sort(),
+    }));
+  }
+
   if (checking) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center pt-28 text-[var(--muted)]">
@@ -470,7 +622,7 @@ export function AdminDashboard() {
               <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
                 {stat.label}
               </p>
-              <p className="display mt-2 text-4xl text-[var(--navy)]">
+              <p className="display mt-2 text-4xl text-[var(--deep)]">
                 {stat.value}
               </p>
             </div>
@@ -481,7 +633,7 @@ export function AdminDashboard() {
             </p>
             <p className="mt-3 text-[var(--ink-soft)]">
               Online booking is{" "}
-              <strong className="text-[var(--navy)]">
+              <strong className="text-[var(--deep)]">
                 {settings.bookingEnabled ? "open" : "closed"}
               </strong>
               . Auto-confirm is{" "}
@@ -530,7 +682,24 @@ export function AdminDashboard() {
                     <br />
                     {a.time}
                   </td>
-                  <td className="px-4 py-4">{a.service}</td>
+                  <td className="px-4 py-4">
+                    <p>{a.service}</p>
+                    {a.visitType === "virtual-consultation" && (
+                      <p className="mt-1 text-xs uppercase tracking-wider text-[var(--teal)]">
+                        Virtual
+                      </p>
+                    )}
+                    {a.meetLink && (
+                      <a
+                        href={a.meetLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex text-sm font-medium text-[var(--teal)] underline-offset-2 hover:underline"
+                      >
+                        Join Google Meet
+                      </a>
+                    )}
+                  </td>
                   <td className="px-4 py-4 capitalize">{a.status}</td>
                   <td className="px-4 py-4">
                     <select
@@ -926,7 +1095,7 @@ export function AdminDashboard() {
                 className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--line)] bg-white p-5"
               >
                 <div>
-                  <p className="font-medium text-[var(--navy)]">
+                  <p className="font-medium text-[var(--deep)]">
                     {s.title}{" "}
                     <span className="text-xs text-[var(--muted)]">
                       ({s.active ? "active" : "hidden"}) · {s.duration}
@@ -959,6 +1128,10 @@ export function AdminDashboard() {
       {tab === "booking" && (
         <div className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8">
           <h2 className="display text-3xl">Booking settings</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Set exactly when the doctor is available each day. Once a patient books
+            a time, that slot is automatically locked for everyone else.
+          </p>
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             <label className="flex items-center gap-3 text-sm md:col-span-2">
               <input
@@ -1026,16 +1199,14 @@ export function AdminDashboard() {
                 }
               />
             </label>
-            <label className="field md:col-span-2">
-              <span>Time slots (one per line, HH:MM)</span>
-              <textarea
-                rows={8}
-                value={slotsText}
-                onChange={(e) => setSlotsText(e.target.value)}
-                placeholder={"09:00\n09:30\n10:00"}
-              />
-            </label>
           </div>
+
+          <WeeklyScheduleEditor
+            schedule={settings.weeklySchedule}
+            onChange={(weeklySchedule) =>
+              setSettings((s) => ({ ...s, weeklySchedule }))
+            }
+          />
           <SaveBar
             saving={saving}
             message={saveMsg}

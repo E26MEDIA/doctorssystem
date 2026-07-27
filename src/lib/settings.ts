@@ -8,6 +8,12 @@ import {
 } from "@/lib/clinic";
 
 export type HourRow = { day: string; time: string };
+export type WeeklyScheduleRow = {
+  dayKey: string;
+  label: string;
+  enabled: boolean;
+  slots: string[];
+};
 
 export type ClinicConfig = {
   name: string;
@@ -20,6 +26,7 @@ export type ClinicConfig = {
   hours: HourRow[];
   social: { instagram: string; linkedin: string };
   timeSlots: string[];
+  weeklySchedule: WeeklyScheduleRow[];
   bookingEnabled: boolean;
   minLeadDays: number;
   maxAdvanceDays: number;
@@ -47,6 +54,25 @@ const defaultHours: HourRow[] = defaultClinic.hours.map((h) => ({
   time: h.time,
 }));
 
+export const weekdayOptions = [
+  { dayKey: "monday", label: "Monday" },
+  { dayKey: "tuesday", label: "Tuesday" },
+  { dayKey: "wednesday", label: "Wednesday" },
+  { dayKey: "thursday", label: "Thursday" },
+  { dayKey: "friday", label: "Friday" },
+  { dayKey: "saturday", label: "Saturday" },
+  { dayKey: "sunday", label: "Sunday" },
+] as const;
+
+const defaultWeeklySchedule: WeeklyScheduleRow[] = weekdayOptions.map(
+  ({ dayKey, label }, index) => ({
+    dayKey,
+    label,
+    enabled: index < 6,
+    slots: [...defaultTimeSlots],
+  }),
+);
+
 export function defaultsConfig(): ClinicConfig {
   return {
     name: defaultClinic.name,
@@ -65,12 +91,16 @@ export function defaultsConfig(): ClinicConfig {
       linkedin: defaultClinic.social.linkedin,
     },
     timeSlots: [...defaultTimeSlots],
+    weeklySchedule: defaultWeeklySchedule.map((row) => ({
+      ...row,
+      slots: [...row.slots],
+    })),
     bookingEnabled: true,
     minLeadDays: 1,
     maxAdvanceDays: 60,
-    autoConfirm: false,
+    autoConfirm: true,
     confirmationNote:
-      "We will confirm your appointment within one business day.",
+      "Your appointment is confirmed. You and the doctor will receive email details for this slot.",
     notifyEmail: defaultClinic.email,
     notifyOnBooking: true,
     notifyOnContact: true,
@@ -87,48 +117,68 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
+function normalizeWeeklySchedule(rows: WeeklyScheduleRow[] | null | undefined) {
+  const map = new Map((rows ?? []).map((row) => [row.dayKey, row]));
+  return weekdayOptions.map(({ dayKey, label }, index) => {
+    const existing = map.get(dayKey);
+    return {
+      dayKey,
+      label,
+      enabled: existing?.enabled ?? index < 6,
+      slots:
+        existing?.slots?.filter((slot) => /^\d{2}:\d{2}$/.test(slot)) ??
+        [...defaultTimeSlots],
+    };
+  });
+}
+
 export async function ensureClinicSettings() {
   const d = defaultsConfig();
+  const payload = {
+    clinicName: d.name,
+    doctorName: d.doctor,
+    credentials: d.credentials,
+    tagline: d.tagline,
+    phone: d.phone,
+    email: d.email,
+    addressLine1: d.address.line1,
+    addressLine2: d.address.line2,
+    instagram: d.social.instagram,
+    linkedin: d.social.linkedin,
+    hoursJson: JSON.stringify(d.hours),
+    timeSlotsJson: JSON.stringify(d.timeSlots),
+    weeklyScheduleJson: JSON.stringify(d.weeklySchedule),
+    bookingEnabled: d.bookingEnabled,
+    minLeadDays: d.minLeadDays,
+    maxAdvanceDays: d.maxAdvanceDays,
+    autoConfirm: d.autoConfirm,
+    confirmationNote: d.confirmationNote,
+    notifyEmail: d.notifyEmail,
+    notifyOnBooking: d.notifyOnBooking,
+    notifyOnContact: d.notifyOnContact,
+    emergencyNote: d.emergencyNote,
+  };
   return prisma.clinicSettings.upsert({
     where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      clinicName: d.name,
-      doctorName: d.doctor,
-      credentials: d.credentials,
-      tagline: d.tagline,
-      phone: d.phone,
-      email: d.email,
-      addressLine1: d.address.line1,
-      addressLine2: d.address.line2,
-      instagram: d.social.instagram,
-      linkedin: d.social.linkedin,
-      hoursJson: JSON.stringify(d.hours),
-      timeSlotsJson: JSON.stringify(d.timeSlots),
-      bookingEnabled: d.bookingEnabled,
-      minLeadDays: d.minLeadDays,
-      maxAdvanceDays: d.maxAdvanceDays,
-      autoConfirm: d.autoConfirm,
-      confirmationNote: d.confirmationNote,
-      notifyEmail: d.notifyEmail,
-      notifyOnBooking: d.notifyOnBooking,
-      notifyOnContact: d.notifyOnContact,
-      emergencyNote: d.emergencyNote,
-    },
+    update: payload,
+    create: { id: "default", ...payload },
   });
 }
 
 export async function ensureServices() {
-  const existing = await prisma.serviceOffering.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
-  if (existing.length > 0) return existing;
+  const defaultSlugs = new Set<string>(defaultServices.map((s) => s.slug));
 
   for (const [i, s] of defaultServices.entries()) {
     await prisma.serviceOffering.upsert({
       where: { slug: s.slug },
-      update: {},
+      update: {
+        title: s.title,
+        summary: s.summary,
+        details: s.details,
+        duration: s.duration,
+        active: true,
+        sortOrder: i,
+      },
       create: {
         slug: s.slug,
         title: s.title,
@@ -138,6 +188,18 @@ export async function ensureServices() {
         active: true,
         sortOrder: i,
       },
+    });
+  }
+
+  const existing = await prisma.serviceOffering.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const stale = existing.filter((row) => !defaultSlugs.has(row.slug));
+  if (stale.length) {
+    await prisma.serviceOffering.updateMany({
+      where: { slug: { in: stale.map((s) => s.slug) } },
+      data: { active: false },
     });
   }
 
@@ -180,6 +242,9 @@ export function rowToConfig(
       linkedin: row.linkedin,
     },
     timeSlots: parseJson<string[]>(row.timeSlotsJson, [...defaultTimeSlots]),
+    weeklySchedule: normalizeWeeklySchedule(
+      parseJson<WeeklyScheduleRow[]>(row.weeklyScheduleJson, defaultWeeklySchedule),
+    ),
     bookingEnabled: row.bookingEnabled,
     minLeadDays: row.minLeadDays,
     maxAdvanceDays: row.maxAdvanceDays,
