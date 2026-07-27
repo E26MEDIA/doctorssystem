@@ -11,6 +11,8 @@ type Appointment = {
   date: string;
   time: string;
   service: string;
+  visitType?: string;
+  meetLink?: string | null;
   notes: string | null;
   status: string;
   createdAt: string;
@@ -59,7 +61,7 @@ const emptySettings = (): ClinicConfig => ({
   bookingEnabled: true,
   minLeadDays: 1,
   maxAdvanceDays: 60,
-  autoConfirm: false,
+  autoConfirm: true,
   confirmationNote: "",
   notifyEmail: "",
   notifyOnBooking: true,
@@ -90,7 +92,7 @@ function TabButton({
       onClick={onClick}
       className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition ${
         active
-          ? "bg-[var(--navy)] text-white"
+          ? "bg-[var(--deep)] text-white"
           : "border border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
       }`}
     >
@@ -470,7 +472,7 @@ export function AdminDashboard() {
               <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
                 {stat.label}
               </p>
-              <p className="display mt-2 text-4xl text-[var(--navy)]">
+              <p className="display mt-2 text-4xl text-[var(--deep)]">
                 {stat.value}
               </p>
             </div>
@@ -481,7 +483,7 @@ export function AdminDashboard() {
             </p>
             <p className="mt-3 text-[var(--ink-soft)]">
               Online booking is{" "}
-              <strong className="text-[var(--navy)]">
+              <strong className="text-[var(--deep)]">
                 {settings.bookingEnabled ? "open" : "closed"}
               </strong>
               . Auto-confirm is{" "}
@@ -530,7 +532,24 @@ export function AdminDashboard() {
                     <br />
                     {a.time}
                   </td>
-                  <td className="px-4 py-4">{a.service}</td>
+                  <td className="px-4 py-4">
+                    <p>{a.service}</p>
+                    {a.visitType === "virtual-consultation" && (
+                      <p className="mt-1 text-xs uppercase tracking-wider text-[var(--teal)]">
+                        Virtual
+                      </p>
+                    )}
+                    {a.meetLink && (
+                      <a
+                        href={a.meetLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex text-sm font-medium text-[var(--teal)] underline-offset-2 hover:underline"
+                      >
+                        Join Google Meet
+                      </a>
+                    )}
+                  </td>
                   <td className="px-4 py-4 capitalize">{a.status}</td>
                   <td className="px-4 py-4">
                     <select
@@ -926,7 +945,7 @@ export function AdminDashboard() {
                 className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--line)] bg-white p-5"
               >
                 <div>
-                  <p className="font-medium text-[var(--navy)]">
+                  <p className="font-medium text-[var(--deep)]">
                     {s.title}{" "}
                     <span className="text-xs text-[var(--muted)]">
                       ({s.active ? "active" : "hidden"}) · {s.duration}
