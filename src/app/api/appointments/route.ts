@@ -7,7 +7,13 @@ import {
   getActiveServices,
   getBlockedDates,
   getClinicConfig,
+  getSlotsForDate,
 } from "@/lib/settings";
+import {
+  buildClinicConfirmEmail,
+  buildVirtualConfirmEmail,
+  sendMail,
+} from "@/lib/email";
 import {
   assertSameOrigin,
   forbiddenOrigin,
@@ -16,6 +22,32 @@ import {
   rateLimitResponse,
   readJsonLimited,
 } from "@/lib/security";
+
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function meetCodeFromSeed(seed: string) {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  let n = 0;
+  for (let i = 0; i < seed.length; i += 1) n = (n * 31 + seed.charCodeAt(i)) >>> 0;
+  const part = (len: number) => {
+    let out = "";
+    let x = n;
+    for (let i = 0; i < len; i += 1) {
+      out += alphabet[x % 26];
+      x = Math.floor(x / 26) || n + i + 1;
+    }
+    return out;
+  };
+  return `${part(3)}-${part(4)}-${part(3)}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -43,7 +75,6 @@ export async function POST(request: Request) {
     if (!body.ok) return body.response;
 
     const parsed = appointmentSchema.safeParse(body.data);
-
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid appointment details" },
@@ -52,13 +83,20 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
-    const validService = services.some((s) => s.title === data.service);
-    if (!validService) {
+    const matched =
+      services.find((s) => s.title === data.service) ||
+      services.find((s) => s.slug === data.visitType);
+
+    if (!matched) {
       return NextResponse.json({ error: "Unknown service" }, { status: 400 });
     }
 
-    if (!config.timeSlots.includes(data.time)) {
-      return NextResponse.json({ error: "Unavailable time slot" }, { status: 400 });
+    const daySlots = getSlotsForDate(config, data.date);
+    if (!daySlots.includes(data.time)) {
+      return NextResponse.json(
+        { error: "Unavailable time slot for this date" },
+        { status: 400 },
+      );
     }
 
     if (blocked.some((b) => b.date === data.date)) {
@@ -89,6 +127,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Lock applies to BOTH clinic and virtual — one booking owns the slot
     const conflict = await prisma.appointment.findFirst({
       where: {
         date: data.date,
@@ -104,24 +143,92 @@ export async function POST(request: Request) {
       );
     }
 
-    const status = config.autoConfirm ? "confirmed" : "pending";
+    const visitType = data.visitType || matched.slug;
+    const isVirtual = visitType === "virtual-consultation";
+    const status = "confirmed";
+    const seed = `${data.email}-${data.date}-${data.time}-${visitType}`;
+    const meetCode = meetCodeFromSeed(seed);
+    const meetLink = isVirtual
+      ? `https://meet.google.com/${meetCode}`
+      : null;
+    const time12 = to12h(data.time);
 
-    await prisma.appointment.create({
+    const appointment = await prisma.appointment.create({
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone,
         date: data.date,
         time: data.time,
-        service: data.service,
+        service: matched.title,
+        visitType,
+        meetLink,
         notes: data.notes || null,
         status,
       },
     });
 
+    let emailSent = false;
+    if (isVirtual && meetLink) {
+      const mail = buildVirtualConfirmEmail({
+        patientName: data.name,
+        date: data.date,
+        time12,
+        meetLink,
+        meetCode,
+        doctorName: config.doctor,
+      });
+      const result = await sendMail({
+        to: data.email,
+        subject: mail.subject,
+        text: mail.text,
+      });
+      emailSent = result.sent;
+
+      if (config.notifyOnBooking && config.notifyEmail) {
+        await sendMail({
+          to: config.notifyEmail,
+          subject: `New virtual booking — ${data.date} ${time12}`,
+          text: `${data.name} booked a virtual visit on ${data.date} at ${time12}.\nMeet: ${meetLink}\nPhone: ${data.phone}\nEmail: ${data.email}`,
+        });
+      }
+    } else {
+      const mail = buildClinicConfirmEmail({
+        patientName: data.name,
+        date: data.date,
+        time12,
+        doctorName: config.doctor,
+        note: config.confirmationNote,
+      });
+      const result = await sendMail({
+        to: data.email,
+        subject: mail.subject,
+        text: mail.text,
+      });
+      emailSent = result.sent;
+
+      if (config.notifyOnBooking && config.notifyEmail) {
+        await sendMail({
+          to: config.notifyEmail,
+          subject: `New clinic booking — ${data.date} ${time12}`,
+          text: `${data.name} booked a clinic visit on ${data.date} at ${time12}.\nPhone: ${data.phone}\nEmail: ${data.email}`,
+        });
+      }
+    }
+
+    const message = isVirtual
+      ? `Confirmed for ${data.date} at ${time12}. Save your Google Meet details below${emailSent ? " — a copy was also emailed to you" : " (and screenshot this page)"}.`
+      : `Confirmed for ${data.date} at ${time12} (clinic visit).${emailSent ? " Confirmation emailed to you." : ""} ${config.confirmationNote}`;
+
     return NextResponse.json({
       ok: true,
-      message: config.confirmationNote,
+      message,
+      status: appointment.status,
+      meetLink: appointment.meetLink,
+      meetCode: isVirtual ? meetCode : null,
+      emailSent,
+      appointmentId: appointment.id,
+      timeLabel: time12,
     });
   } catch {
     return NextResponse.json(
@@ -150,19 +257,20 @@ export async function GET(request: Request) {
         date,
         status: { in: ["pending", "confirmed"] },
       },
-      select: { time: true },
+      select: { time: true, visitType: true },
     }),
     getBlockedDates(),
     getClinicConfig(),
   ]);
 
   const isBlocked = blocked.some((b) => b.date === date);
+  const daySlots = getSlotsForDate(config, date);
 
   return NextResponse.json({
     booked: booked.map((b) => b.time),
     blocked: isBlocked,
     bookingEnabled: config.bookingEnabled,
-    timeSlots: config.timeSlots,
+    timeSlots: daySlots,
     minDate: format(addDays(new Date(), config.minLeadDays), "yyyy-MM-dd"),
     maxDate: format(addDays(new Date(), config.maxAdvanceDays), "yyyy-MM-dd"),
   });

@@ -1,62 +1,53 @@
-# Meridian Health — Doctor Clinic Website
+# Dr. Sharath S. Honnani — Surgical Gastroenterology
 
-Full-stack clinic site for **Dr. Anika Rao, MD** (Internal Medicine), built with Next.js, Prisma, and SQLite.
+Clinic website for **Dr. Sharath S. Honnani** (MBBS, MS, Fellowship in Surgical Gastroenterology), Visiting Consultant at Yenepoya Specialty Hospital, Mangaluru.
+
+Built with **Next.js**, **Prisma**, and **PostgreSQL**. Deploy on **Vercel** (site + API + admin in one app).
 
 ## Features
 
-- Marketing pages: Home, About, Services, Journal, Contact
-- Online appointment booking with conflict checks
-- Contact form with message storage
-- Admin dashboard (`/admin`) to confirm appointments and read messages
-- Responsive design with scroll reveal motion
+- Public site: home, about, services, gallery, journal, contact
+- Booking: **clinic consultation** or **virtual consultation**
+- Open slots confirm instantly; virtual visits get a Google Meet link
+- Admin dashboard (`/admin`) for profile, hours, services, slots, blocked dates, and appointments
 
-## Quick start
+## Sources
+
+- Hospital profile: https://www.yenepoyahospital.com/dr-s-s-honnani/
+- Instagram: https://www.instagram.com/dr.honnani/
+
+## Local setup
+
+1. Create a Postgres database (local install, Docker, or free [Neon](https://neon.tech)).
+2. Copy env and set `DATABASE_URL`:
 
 ```bash
 npm install
-npm run db:push
+cp .env.example .env
+# edit DATABASE_URL, ADMIN_SECRET, ADMIN_PASSWORD
+npx prisma migrate deploy
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Admin: `/admin` (password from `ADMIN_PASSWORD`; default `Demo@12345` in development).
 
-Admin: [http://localhost:3000/admin](http://localhost:3000/admin)  
-Default password: `Demo@12345` (change in `.env` or Admin → Security)
+## Deploy on Vercel
 
-### Admin settings tabs
+1. Push this repo to GitHub.
+2. In [Vercel](https://vercel.com): **Add New Project** → import the repo.
+3. Add a Postgres database:
+   - Vercel dashboard → **Storage** → **Create Database** → **Postgres** (or Neon), then connect it to the project  
+   - Or paste a Neon connection string as `DATABASE_URL`
+4. Set environment variables:
 
-- Overview, Appointments, Messages
-- Clinic profile, Hours, Services
-- Booking rules & time slots, Blocked dates
-- Notifications, Security (password change)
-
-## Environment
-
-Copy `.env.example` to `.env`:
-
-| Variable | Purpose |
-|----------|---------|
-| `DATABASE_URL` | SQLite path (`file:./dev.db`) |
+| Name | Notes |
+|------|--------|
+| `DATABASE_URL` | Postgres URL (**pooled** URL on Neon/Vercel) |
+| `DIRECT_URL` | Direct (non-pooled) URL — same as `DATABASE_URL` if you only have one |
+| `ADMIN_SECRET` | Random string, 32+ characters |
 | `ADMIN_PASSWORD` | Admin login password |
-| `ADMIN_SECRET` | Session signing secret |
 
-## Production
+5. Deploy. Build runs `prisma migrate deploy` then `next build`, so tables are created automatically.
+6. Open `https://YOUR-APP.vercel.app/admin` and sign in.
 
-```bash
-npm run build
-npm start
-```
-
-Before deploying, set strong values for:
-
-- `ADMIN_SECRET` — random, **≥ 32 characters** (required; example values are rejected)
-- `ADMIN_PASSWORD` — required in production (no default fallback)
-
-### Security controls
-
-- Signed, expiring admin sessions (`HttpOnly`, `SameSite=Strict`)
-- Origin checks on mutating API routes
-- Rate limits on login, booking, and contact
-- Public `/api/clinic` strips internal notification settings
-- Security headers via middleware (CSP, frame deny, nosniff, etc.)
-- Stronger admin password policy (length + complexity)
+Frontend, booking APIs, and the admin panel all ship together — no separate backend host.

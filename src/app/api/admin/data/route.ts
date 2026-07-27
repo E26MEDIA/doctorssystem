@@ -75,7 +75,33 @@ const settingsSchema = z.object({
     instagram: optionalHttpUrl,
     linkedin: optionalHttpUrl,
   }),
-  timeSlots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).min(1).max(48),
+  timeSlots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
+  weeklySchedule: z
+    .array(
+      z.object({
+        dayKey: z.enum([
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ]),
+        label: z.string().trim().min(1).max(20),
+        enabled: z.boolean(),
+        slots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
+      }),
+    )
+    .optional(),
+  dateSchedule: z.array(
+    z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      label: z.string().trim().min(1).max(40),
+      enabled: z.boolean(),
+      slots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
+    }),
+  ),
   bookingEnabled: z.boolean(),
   minLeadDays: z.number().int().min(0).max(30),
   maxAdvanceDays: z.number().int().min(1).max(365),
@@ -112,6 +138,11 @@ export async function PUT(request: Request) {
     }
 
     const s = parsed.data;
+    const uniqueSlots = Array.from(
+      new Set(
+        s.dateSchedule.flatMap((row) => (row.enabled ? row.slots : [])),
+      ),
+    ).sort();
     await ensureClinicSettings();
 
     const row = await prisma.clinicSettings.update({
@@ -128,7 +159,11 @@ export async function PUT(request: Request) {
         instagram: s.social.instagram,
         linkedin: s.social.linkedin,
         hoursJson: JSON.stringify(s.hours),
-        timeSlotsJson: JSON.stringify(s.timeSlots),
+        timeSlotsJson: JSON.stringify(
+          uniqueSlots.length ? uniqueSlots : s.timeSlots,
+        ),
+        weeklyScheduleJson: JSON.stringify(s.weeklySchedule ?? []),
+        dateScheduleJson: JSON.stringify(s.dateSchedule),
         bookingEnabled: s.bookingEnabled,
         minLeadDays: s.minLeadDays,
         maxAdvanceDays: s.maxAdvanceDays,
