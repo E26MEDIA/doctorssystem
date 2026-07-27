@@ -270,40 +270,32 @@ export function AppointmentForm() {
         />
       </label>
 
-      <div>
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-          Open slot
-        </p>
+      <label className="field">
+        <span>Open slot</span>
         {dayBlocked ? (
-          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+          <p className="mt-1 text-sm text-[var(--ink-soft)]">
             Clinic closed this day
           </p>
-        ) : openSlots.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--ink-soft)]">
-            No open slots for this date
-          </p>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {openSlots.map((slot) => {
-              const active = form.time === slot;
-              return (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setForm({ ...form, time: slot })}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                    active
-                      ? "border-[var(--teal)] bg-[var(--teal)] text-white"
-                      : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
-                  }`}
-                >
-                  {to12h(slot)}
-                </button>
-              );
-            })}
-          </div>
+          <select
+            required
+            value={form.time}
+            onChange={(e) => setForm({ ...form, time: e.target.value })}
+            disabled={openSlots.length === 0}
+          >
+            <option value="">
+              {openSlots.length === 0
+                ? "No open slots for this date"
+                : "Select a time"}
+            </option>
+            {openSlots.map((slot) => (
+              <option key={slot} value={slot}>
+                {to12h(slot)}
+              </option>
+            ))}
+          </select>
         )}
-      </div>
+      </label>
 
       <label className="field">
         <span>Notes (optional)</span>
