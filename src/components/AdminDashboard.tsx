@@ -88,6 +88,125 @@ const emptySettings = (): ClinicConfig => ({
   emergencyNote: "",
 });
 
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+/** Convert "14:30" → "2:30 PM" */
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr.padStart(2, "0")} ${ampm}`;
+}
+
+/** All bookable slots throughout the day in 30-min increments */
+const ALL_SLOTS: string[] = Array.from({ length: 28 }, (_, i) => {
+  const totalMin = 7 * 60 + i * 30; // 7:00 AM to 8:30 PM
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
+// ── Weekly Schedule Editor ────────────────────────────────────────────────────
+
+function WeeklyScheduleEditor({
+  schedule,
+  onChange,
+}: {
+  schedule: WeeklyScheduleRow[];
+  onChange: (updated: WeeklyScheduleRow[]) => void;
+}) {
+  function updateDay(dayKey: string, patch: Partial<WeeklyScheduleRow>) {
+    onChange(
+      schedule.map((row) =>
+        row.dayKey === dayKey ? { ...row, ...patch } : row,
+      ),
+    );
+  }
+
+  function toggleSlot(dayKey: string, slot: string, currentSlots: string[]) {
+    const next = currentSlots.includes(slot)
+      ? currentSlots.filter((s) => s !== slot)
+      : [...currentSlots, slot].sort();
+    updateDay(dayKey, { slots: next });
+  }
+
+  return (
+    <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
+      <h3 className="text-lg font-semibold text-[var(--deep)]">
+        Weekly consultation schedule
+      </h3>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Toggle each day on/off. Tap a time card to add or remove that slot.
+        Booked slots are automatically locked once a patient confirms.
+      </p>
+
+      <div className="mt-5 space-y-4">
+        {schedule.map((row) => (
+          <div
+            key={row.dayKey}
+            className={`rounded-xl border bg-white p-4 transition-opacity ${
+              row.enabled ? "border-[var(--line)]" : "border-[var(--line)] opacity-60"
+            }`}
+          >
+            {/* Day header */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-[var(--deep)]">{row.label}</p>
+                <p className="text-sm text-[var(--muted)]">
+                  {row.enabled
+                    ? row.slots.length
+                      ? row.slots.map(to12h).join(" · ")
+                      : "No slots selected"
+                    : "Doctor unavailable"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateDay(row.dayKey, { enabled: !row.enabled })}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                  row.enabled
+                    ? "bg-[var(--teal)] text-white"
+                    : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
+                }`}
+              >
+                {row.enabled ? "Available" : "Off"}
+              </button>
+            </div>
+
+            {/* Slot cards grid */}
+            {row.enabled && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {ALL_SLOTS.map((slot) => {
+                  const active = row.slots.includes(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => toggleSlot(row.dayKey, slot, row.slots)}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                        active
+                          ? "border-[var(--teal)] bg-[var(--teal)] text-white shadow-sm"
+                          : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)] hover:text-[var(--teal)]"
+                      }`}
+                    >
+                      {to12h(slot)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -1082,67 +1201,12 @@ export function AdminDashboard() {
             </label>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
-            <h3 className="text-lg font-semibold text-[var(--deep)]">
-              Weekly consultation schedule
-            </h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Example: if the doctor is only in clinic after 11:00 AM, add only
-              those timings for that day. Leave a day off if he is unavailable.
-            </p>
-
-            <div className="mt-5 space-y-4">
-              {settings.weeklySchedule.map((row) => (
-                <div
-                  key={row.dayKey}
-                  className="rounded-xl border border-[var(--line)] bg-white p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-[var(--deep)]">{row.label}</p>
-                      <p className="text-sm text-[var(--muted)]">
-                        {row.enabled
-                          ? row.slots.length
-                            ? `${row.slots.length} consultation slot${row.slots.length > 1 ? "s" : ""}`
-                            : "Available, but no slots added yet"
-                          : "Doctor unavailable"}
-                      </p>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm text-[var(--ink-soft)]">
-                      <input
-                        type="checkbox"
-                        checked={row.enabled}
-                        onChange={(e) =>
-                          updateWeeklyDay(row.dayKey, {
-                            enabled: e.target.checked,
-                          })
-                        }
-                      />
-                      Available this day
-                    </label>
-                  </div>
-
-                  <label className="field mt-4">
-                    <span>Consultation slots for {row.label} (one per line, HH:MM)</span>
-                    <textarea
-                      rows={4}
-                      disabled={!row.enabled}
-                      value={row.slots.join("\n")}
-                      onChange={(e) =>
-                        updateWeeklyDay(row.dayKey, {
-                          slots: e.target.value
-                            .split(/[\n,]+/)
-                            .map((slot) => slot.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      placeholder={"11:00\n11:30\n12:00\n16:00"}
-                    />
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
+          <WeeklyScheduleEditor
+            schedule={settings.weeklySchedule}
+            onChange={(weeklySchedule) =>
+              setSettings((s) => ({ ...s, weeklySchedule }))
+            }
+          />
           <SaveBar
             saving={saving}
             message={saveMsg}

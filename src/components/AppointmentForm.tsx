@@ -6,6 +6,16 @@ type ServiceOption = { title: string; slug: string };
 
 type Status = "idle" | "loading" | "success" | "error";
 
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr.padStart(2, "0")} ${ampm}`;
+}
+
 const VISIT_TYPES = [
   {
     slug: "clinic-consultation",
@@ -254,7 +264,7 @@ export function AppointmentForm() {
             </option>
             {openSlots.map((slot) => (
               <option key={slot} value={slot}>
-                {slot}
+                {to12h(slot)}
               </option>
             ))}
           </select>
