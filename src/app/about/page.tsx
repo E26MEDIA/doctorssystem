@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Reveal } from "@/components/Reveal";
+import { doctorProfile } from "@/lib/clinic";
 import { getClinicConfig } from "@/lib/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const clinic = await getClinicConfig();
   return {
     title: "About",
-    description: `Meet ${clinic.doctor}, founder of ${clinic.name}.`,
+    description: `Meet ${clinic.doctor}, Surgical Gastroenterologist.`,
   };
 }
 
@@ -18,113 +18,100 @@ export default async function AboutPage() {
   return (
     <div className="pt-28">
       <section className="mx-auto max-w-6xl px-5 pb-16 md:px-8">
-        <Reveal>
-          <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
-            About
-          </p>
-          <h1 className="display mt-3 max-w-3xl text-5xl md:text-6xl">
-            Care shaped by curiosity, not convenience.
-          </h1>
-        </Reveal>
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
+          About
+        </p>
+        <h1 className="display mt-3 max-w-3xl text-5xl md:text-6xl">
+          {clinic.doctor}
+        </h1>
+        <p className="mt-4 max-w-2xl text-lg text-[var(--ink-soft)]">
+          {doctorProfile.role} · {clinic.credentials}
+        </p>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 md:grid-cols-2 md:px-8">
-        <Reveal>
-          <div className="relative aspect-[4/5] overflow-hidden">
-            <Image
-              src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=1200&q=80"
-              alt={clinic.doctor}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
-          </div>
-        </Reveal>
-        <Reveal delay={100}>
-          <div className="prose-clinic self-center text-lg leading-relaxed text-[var(--ink-soft)]">
-            <p>
-              {clinic.doctor} is an internal medicine physician focused on
-              prevention, metabolic health, and the kind of follow-through that
-              rarely fits into a seven-minute slot.
-            </p>
-            <p>
-              After years in high-volume hospital medicine, she founded{" "}
-              {clinic.name} to practice differently: fewer patients, deeper
-              visits, and care plans written in plain language.
-            </p>
-            <p>
-              Patients come for annual physicals, chronic disease management,
-              midlife health, and second opinions — and stay for the continuity.
-            </p>
-            <Link href="/book" className="btn-primary mt-8">
-              Book with {clinic.doctor.replace(/^Dr\.\s*/, "Dr. ")}
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
+          <Image
+            src="/images/doctor.jpg"
+            alt={clinic.doctor}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority
+          />
+        </div>
+        <div className="prose-clinic self-center text-lg leading-relaxed text-[var(--ink-soft)]">
+          {doctorProfile.bio.map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+          <p className="mt-6">
+            Practice affiliation: {doctorProfile.hospital}. Follow updates on{" "}
+            <a
+              href={clinic.social.instagram}
+              className="text-[var(--teal)] underline-offset-4 hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Instagram @dr.honnani
+            </a>
+            .
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/gallery" className="btn-primary">
+              View gallery
+            </Link>
+            <Link href="/#book" className="btn-ghost">
+              Book consultation
             </Link>
           </div>
-        </Reveal>
+        </div>
       </section>
 
-      <section className="border-y border-[var(--line)] bg-white/50">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-3 md:px-8">
-          {[
-            {
-              label: "Training",
-              items: [
-                clinic.credentials,
-                "Residency: tertiary care hospital medicine",
-                "Ongoing CME in cardiometabolic health",
-              ],
-            },
-            {
-              label: "Focus areas",
-              items: [
-                "Hypertension & diabetes",
-                "Preventive screening",
-                "Women’s midlife health",
-                "Executive wellness",
-              ],
-            },
-            {
-              label: "Philosophy",
-              items: [
-                "Listen first, test second",
-                "Explain every recommendation",
-                "Partner with specialists when needed",
-                "Measure what matters to you",
-              ],
-            },
-          ].map((col, i) => (
-            <Reveal key={col.label} delay={i * 80}>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--brass)]">
-                  {col.label}
-                </p>
-                <ul className="mt-5 space-y-3 text-[var(--ink-soft)]">
-                  {col.items.map((item) => (
-                    <li key={item} className="border-b border-[var(--line)] pb-3">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+      <section className="border-y border-[var(--line)] bg-white/55 section-pad">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <h2 className="display text-4xl md:text-5xl">Education</h2>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
+            {doctorProfile.education.map((item) => (
+              <div key={item.title} className="border-t border-[var(--line)] pt-6">
+                <h3 className="display text-2xl text-[var(--deep)]">{item.title}</h3>
+                <p className="mt-3 text-[var(--ink-soft)]">{item.detail}</p>
               </div>
-            </Reveal>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="section-pad">
-        <Reveal>
-          <div className="mx-auto max-w-3xl px-5 text-center md:px-8">
-            <h2 className="display text-4xl md:text-5xl">
-              The clinic you’ll return to.
-            </h2>
-            <p className="mt-5 text-lg text-[var(--ink-soft)]">
-              {clinic.address.line1}, {clinic.address.line2} — calm consulting
-              rooms, coordinated labs, and video follow-ups when travel isn’t
-              necessary.
-            </p>
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <h2 className="display text-4xl md:text-5xl">Experience</h2>
+          <div className="mt-10 space-y-8">
+            {doctorProfile.experience.map((item) => (
+              <div
+                key={item.place}
+                className="grid gap-2 border-l-2 border-[var(--teal)] pl-5 md:grid-cols-[1fr_1.4fr] md:gap-8"
+              >
+                <h3 className="display text-2xl text-[var(--deep)]">{item.place}</h3>
+                <p className="text-lg text-[var(--ink-soft)]">{item.detail}</p>
+              </div>
+            ))}
           </div>
-        </Reveal>
+        </div>
+      </section>
+
+      <section className="section-pad bg-[var(--deep)] text-white">
+        <div className="mx-auto max-w-6xl px-5 md:px-8">
+          <h2 className="display text-4xl md:text-5xl">Clinical expertise</h2>
+          <ul className="mt-10 grid gap-4 md:grid-cols-2">
+            {doctorProfile.expertise.map((item) => (
+              <li
+                key={item}
+                className="rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white/90"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
     </div>
   );
