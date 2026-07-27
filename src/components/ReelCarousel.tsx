@@ -21,24 +21,26 @@ export function ReelCarousel() {
   const items = useMemo(() => localReels as ReelItem[], []);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
-    // Play only the active center reel; pause others
     items.forEach((item, index) => {
       const el = videoRefs.current[item.id];
       if (!el) return;
+
       if (index === active) {
-        el.muted = true;
+        el.muted = !soundOn;
         el.playsInline = true;
         const playPromise = el.play();
         if (playPromise) playPromise.catch(() => undefined);
       } else {
         el.pause();
+        el.muted = true;
         el.currentTime = 0;
       }
     });
-  }, [active, items]);
+  }, [active, items, soundOn]);
 
   useEffect(() => {
     if (items.length < 2 || paused) return;
@@ -57,31 +59,45 @@ export function ReelCarousel() {
     setActive((prev) => (prev + delta + len) % len);
   }
 
+  function toggleSound() {
+    setSoundOn((on) => {
+      const next = !on;
+      const el = videoRefs.current[current.id];
+      if (el) {
+        el.muted = !next;
+        if (next) {
+          el.play().catch(() => undefined);
+        }
+      }
+      return next;
+    });
+  }
+
   return (
     <div
       className="reel-carousel"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative mx-auto max-w-4xl px-12 md:px-16">
-        <button
-          type="button"
-          aria-label="Previous reel"
-          onClick={() => go(-1)}
-          className="reel-nav absolute top-1/2 left-0 z-[100] -translate-y-1/2"
-        >
-          <span aria-hidden>‹</span>
-        </button>
-        <button
-          type="button"
-          aria-label="Next reel"
-          onClick={() => go(1)}
-          className="reel-nav absolute top-1/2 right-0 z-[100] -translate-y-1/2"
-        >
-          <span aria-hidden>›</span>
-        </button>
+      <div className="reel-stage relative mx-auto max-w-4xl px-14 md:px-20">
+        <div className="relative mx-auto h-[min(70vh,620px)] w-full">
+          <button
+            type="button"
+            aria-label="Previous reel"
+            onClick={() => go(-1)}
+            className="reel-nav reel-nav--prev"
+          >
+            <span aria-hidden>‹</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Next reel"
+            onClick={() => go(1)}
+            className="reel-nav reel-nav--next"
+          >
+            <span aria-hidden>›</span>
+          </button>
 
-        <div className="relative mx-auto h-[min(70vh,620px)] w-full bg-transparent">
           {items.map((item, index) => {
             const offset = circularOffset(index, active, len);
             const abs = Math.abs(offset);
@@ -111,12 +127,16 @@ export function ReelCarousel() {
                   }}
                   src={item.src}
                   className="h-full w-full object-cover"
-                  muted
+                  muted={!isCenter || !soundOn}
                   playsInline
                   loop
                   preload={isCenter ? "auto" : "metadata"}
                   onClick={() => {
-                    if (!isCenter) setActive(index);
+                    if (!isCenter) {
+                      setActive(index);
+                      return;
+                    }
+                    toggleSound();
                   }}
                 />
 
@@ -134,19 +154,60 @@ export function ReelCarousel() {
                 )}
 
                 {isCenter && (
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent px-4 pb-4 pt-16 text-white">
-                    <p className="text-sm font-medium leading-snug">
-                      {item.title}
-                    </p>
-                    <a
-                      href={instagramProfile}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="pointer-events-auto mt-3 flex w-full items-center justify-center rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
+                  <>
+                    <button
+                      type="button"
+                      onClick={toggleSound}
+                      aria-label={soundOn ? "Mute reel" : "Unmute reel"}
+                      className="absolute top-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/60"
                     >
-                      View
-                    </a>
-                  </div>
+                      {soundOn ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden
+                        >
+                          <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+                          <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                          <path d="M18 5a9 9 0 0 1 0 14" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden
+                        >
+                          <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+                          <path d="m22 9-6 6M16 9l6 6" />
+                        </svg>
+                      )}
+                    </button>
+
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent px-4 pb-4 pt-16 text-white">
+                      <p className="text-sm font-medium leading-snug">
+                        {item.title}
+                      </p>
+                      {!soundOn && (
+                        <p className="mt-1 text-xs text-white/75">
+                          Tap video or speaker to turn sound on
+                        </p>
+                      )}
+                      <a
+                        href={instagramProfile}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="pointer-events-auto mt-3 flex w-full items-center justify-center rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white"
+                      >
+                        View
+                      </a>
+                    </div>
+                  </>
                 )}
               </div>
             );

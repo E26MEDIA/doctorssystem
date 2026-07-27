@@ -263,7 +263,7 @@ export const localReels: ReadonlyArray<{
     id: "reel-02",
     src: "/videos/reels/reel-02.mp4",
     title: "Clinical reel 2",
-    caption: "Patient education and procedure highlights.",
+    caption: "Patient education and procedure highlights — tap the speaker for sound.",
   },
 ];
 
