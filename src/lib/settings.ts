@@ -1,3 +1,4 @@
+import { addDays, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   articles,
@@ -10,6 +11,12 @@ import {
 export type HourRow = { day: string; time: string };
 export type WeeklyScheduleRow = {
   dayKey: string;
+  label: string;
+  enabled: boolean;
+  slots: string[];
+};
+export type DateScheduleRow = {
+  date: string;
   label: string;
   enabled: boolean;
   slots: string[];
@@ -27,6 +34,7 @@ export type ClinicConfig = {
   social: { instagram: string; linkedin: string };
   timeSlots: string[];
   weeklySchedule: WeeklyScheduleRow[];
+  dateSchedule: DateScheduleRow[];
   bookingEnabled: boolean;
   minLeadDays: number;
   maxAdvanceDays: number;
@@ -73,6 +81,37 @@ const defaultWeeklySchedule: WeeklyScheduleRow[] = weekdayOptions.map(
   }),
 );
 
+export function formatScheduleLabel(dateStr: string) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return format(d, "EEE, d MMM yyyy");
+}
+
+/** Build the next N bookable calendar days for the admin schedule editor. */
+export function buildDateScheduleWindow(
+  days = 14,
+  leadDays = 1,
+  saved: DateScheduleRow[] = [],
+): DateScheduleRow[] {
+  const savedMap = new Map(saved.map((row) => [row.date, row]));
+  const start = addDays(new Date(), leadDays);
+  start.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: days }, (_, i) => {
+    const date = format(addDays(start, i), "yyyy-MM-dd");
+    const existing = savedMap.get(date);
+    const weekday = addDays(start, i).getDay(); // 0 Sun
+    return {
+      date,
+      label: formatScheduleLabel(date),
+      enabled: existing?.enabled ?? weekday !== 0,
+      slots:
+        existing?.slots?.filter((slot) => /^\d{2}:\d{2}$/.test(slot)) ??
+        [...defaultTimeSlots],
+    };
+  });
+}
+
 export function defaultsConfig(): ClinicConfig {
   return {
     name: defaultClinic.name,
@@ -95,6 +134,7 @@ export function defaultsConfig(): ClinicConfig {
       ...row,
       slots: [...row.slots],
     })),
+    dateSchedule: buildDateScheduleWindow(14, 1),
     bookingEnabled: true,
     minLeadDays: 1,
     maxAdvanceDays: 60,
@@ -148,6 +188,7 @@ export async function ensureClinicSettings() {
     hoursJson: JSON.stringify(d.hours),
     timeSlotsJson: JSON.stringify(d.timeSlots),
     weeklyScheduleJson: JSON.stringify(d.weeklySchedule),
+    dateScheduleJson: JSON.stringify(d.dateSchedule),
     bookingEnabled: d.bookingEnabled,
     minLeadDays: d.minLeadDays,
     maxAdvanceDays: d.maxAdvanceDays,
@@ -158,27 +199,20 @@ export async function ensureClinicSettings() {
     notifyOnContact: d.notifyOnContact,
     emergencyNote: d.emergencyNote,
   };
+
+  // CRITICAL: never overwrite admin-saved settings on every page load
   return prisma.clinicSettings.upsert({
     where: { id: "default" },
-    update: payload,
+    update: {},
     create: { id: "default", ...payload },
   });
 }
 
 export async function ensureServices() {
-  const defaultSlugs = new Set<string>(defaultServices.map((s) => s.slug));
-
   for (const [i, s] of defaultServices.entries()) {
     await prisma.serviceOffering.upsert({
       where: { slug: s.slug },
-      update: {
-        title: s.title,
-        summary: s.summary,
-        details: s.details,
-        duration: s.duration,
-        active: true,
-        sortOrder: i,
-      },
+      update: {},
       create: {
         slug: s.slug,
         title: s.title,
@@ -188,18 +222,6 @@ export async function ensureServices() {
         active: true,
         sortOrder: i,
       },
-    });
-  }
-
-  const existing = await prisma.serviceOffering.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
-
-  const stale = existing.filter((row) => !defaultSlugs.has(row.slug));
-  if (stale.length) {
-    await prisma.serviceOffering.updateMany({
-      where: { slug: { in: stale.map((s) => s.slug) } },
-      data: { active: false },
     });
   }
 
@@ -225,6 +247,14 @@ export async function ensureAllSettings() {
 export function rowToConfig(
   row: Awaited<ReturnType<typeof ensureClinicSettings>>,
 ): ClinicConfig {
+  const weeklySchedule = normalizeWeeklySchedule(
+    parseJson<WeeklyScheduleRow[]>(row.weeklyScheduleJson, defaultWeeklySchedule),
+  );
+  const savedDates = parseJson<DateScheduleRow[]>(
+    row.dateScheduleJson || "[]",
+    [],
+  );
+
   return {
     name: row.clinicName,
     doctor: row.doctorName,
@@ -242,8 +272,11 @@ export function rowToConfig(
       linkedin: row.linkedin,
     },
     timeSlots: parseJson<string[]>(row.timeSlotsJson, [...defaultTimeSlots]),
-    weeklySchedule: normalizeWeeklySchedule(
-      parseJson<WeeklyScheduleRow[]>(row.weeklyScheduleJson, defaultWeeklySchedule),
+    weeklySchedule,
+    dateSchedule: buildDateScheduleWindow(
+      14,
+      row.minLeadDays,
+      savedDates,
     ),
     bookingEnabled: row.bookingEnabled,
     minLeadDays: row.minLeadDays,
@@ -255,6 +288,30 @@ export function rowToConfig(
     notifyOnContact: row.notifyOnContact,
     emergencyNote: row.emergencyNote,
   };
+}
+
+export function getSlotsForDate(config: ClinicConfig, date: string): string[] {
+  const exact = config.dateSchedule.find((row) => row.date === date);
+  if (exact) {
+    if (!exact.enabled) return [];
+    return exact.slots;
+  }
+
+  // Fallback for dates outside the 14-day admin window: weekly template
+  const target = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return [];
+  const dayKey = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ][target.getDay()];
+  const weekly = config.weeklySchedule.find((item) => item.dayKey === dayKey);
+  if (!weekly || !weekly.enabled) return [];
+  return weekly.slots;
 }
 
 export async function getClinicConfig(): Promise<ClinicConfig> {

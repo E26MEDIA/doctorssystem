@@ -76,18 +76,28 @@ const settingsSchema = z.object({
     linkedin: optionalHttpUrl,
   }),
   timeSlots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
-  weeklySchedule: z.array(
+  weeklySchedule: z
+    .array(
+      z.object({
+        dayKey: z.enum([
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ]),
+        label: z.string().trim().min(1).max(20),
+        enabled: z.boolean(),
+        slots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
+      }),
+    )
+    .optional(),
+  dateSchedule: z.array(
     z.object({
-      dayKey: z.enum([
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ]),
-      label: z.string().trim().min(1).max(20),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      label: z.string().trim().min(1).max(40),
       enabled: z.boolean(),
       slots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(48),
     }),
@@ -129,7 +139,9 @@ export async function PUT(request: Request) {
 
     const s = parsed.data;
     const uniqueSlots = Array.from(
-      new Set(s.weeklySchedule.flatMap((row) => (row.enabled ? row.slots : []))),
+      new Set(
+        s.dateSchedule.flatMap((row) => (row.enabled ? row.slots : [])),
+      ),
     ).sort();
     await ensureClinicSettings();
 
@@ -147,8 +159,11 @@ export async function PUT(request: Request) {
         instagram: s.social.instagram,
         linkedin: s.social.linkedin,
         hoursJson: JSON.stringify(s.hours),
-        timeSlotsJson: JSON.stringify(uniqueSlots.length ? uniqueSlots : s.timeSlots),
-        weeklyScheduleJson: JSON.stringify(s.weeklySchedule),
+        timeSlotsJson: JSON.stringify(
+          uniqueSlots.length ? uniqueSlots : s.timeSlots,
+        ),
+        weeklyScheduleJson: JSON.stringify(s.weeklySchedule ?? []),
+        dateScheduleJson: JSON.stringify(s.dateSchedule),
         bookingEnabled: s.bookingEnabled,
         minLeadDays: s.minLeadDays,
         maxAdvanceDays: s.maxAdvanceDays,

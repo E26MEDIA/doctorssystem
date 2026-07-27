@@ -21,6 +21,7 @@ function toPublicClinic(settings: Awaited<ReturnType<typeof getClinicConfig>>) {
     social: settings.social,
     timeSlots: settings.timeSlots,
     weeklySchedule: settings.weeklySchedule,
+    dateSchedule: settings.dateSchedule,
     bookingEnabled: settings.bookingEnabled,
     minLeadDays: settings.minLeadDays,
     maxAdvanceDays: settings.maxAdvanceDays,

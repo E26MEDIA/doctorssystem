@@ -7,7 +7,13 @@ import {
   getActiveServices,
   getBlockedDates,
   getClinicConfig,
+  getSlotsForDate,
 } from "@/lib/settings";
+import {
+  buildClinicConfirmEmail,
+  buildVirtualConfirmEmail,
+  sendMail,
+} from "@/lib/email";
 import {
   assertSameOrigin,
   forbiddenOrigin,
@@ -16,6 +22,16 @@ import {
   rateLimitResponse,
   readJsonLimited,
 } from "@/lib/security";
+
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
 
 function meetCodeFromSeed(seed: string) {
   const alphabet = "abcdefghijklmnopqrstuvwxyz";
@@ -26,30 +42,11 @@ function meetCodeFromSeed(seed: string) {
     let x = n;
     for (let i = 0; i < len; i += 1) {
       out += alphabet[x % 26];
-      x = Math.floor(x / 26) || (n + i + 1);
+      x = Math.floor(x / 26) || n + i + 1;
     }
     return out;
   };
   return `${part(3)}-${part(4)}-${part(3)}`;
-}
-
-const dayKeyByIndex = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-] as const;
-
-function getSlotsForDate(config: Awaited<ReturnType<typeof getClinicConfig>>, date: string) {
-  const target = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(target.getTime())) return [];
-  const dayKey = dayKeyByIndex[target.getDay()];
-  const row = config.weeklySchedule.find((item) => item.dayKey === dayKey);
-  if (!row || !row.enabled) return [];
-  return row.slots;
 }
 
 export async function POST(request: Request) {
@@ -78,7 +75,6 @@ export async function POST(request: Request) {
     if (!body.ok) return body.response;
 
     const parsed = appointmentSchema.safeParse(body.data);
-
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid appointment details" },
@@ -97,7 +93,10 @@ export async function POST(request: Request) {
 
     const daySlots = getSlotsForDate(config, data.date);
     if (!daySlots.includes(data.time)) {
-      return NextResponse.json({ error: "Unavailable time slot" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unavailable time slot for this date" },
+        { status: 400 },
+      );
     }
 
     if (blocked.some((b) => b.date === data.date)) {
@@ -128,6 +127,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Lock applies to BOTH clinic and virtual — one booking owns the slot
     const conflict = await prisma.appointment.findFirst({
       where: {
         date: data.date,
@@ -145,12 +145,13 @@ export async function POST(request: Request) {
 
     const visitType = data.visitType || matched.slug;
     const isVirtual = visitType === "virtual-consultation";
-    // Instant confirm whenever a slot is open (doctor-owned weekly slots).
     const status = "confirmed";
     const seed = `${data.email}-${data.date}-${data.time}-${visitType}`;
+    const meetCode = meetCodeFromSeed(seed);
     const meetLink = isVirtual
-      ? `https://meet.google.com/${meetCodeFromSeed(seed)}`
+      ? `https://meet.google.com/${meetCode}`
       : null;
+    const time12 = to12h(data.time);
 
     const appointment = await prisma.appointment.create({
       data: {
@@ -167,16 +168,67 @@ export async function POST(request: Request) {
       },
     });
 
+    let emailSent = false;
+    if (isVirtual && meetLink) {
+      const mail = buildVirtualConfirmEmail({
+        patientName: data.name,
+        date: data.date,
+        time12,
+        meetLink,
+        meetCode,
+        doctorName: config.doctor,
+      });
+      const result = await sendMail({
+        to: data.email,
+        subject: mail.subject,
+        text: mail.text,
+      });
+      emailSent = result.sent;
+
+      if (config.notifyOnBooking && config.notifyEmail) {
+        await sendMail({
+          to: config.notifyEmail,
+          subject: `New virtual booking — ${data.date} ${time12}`,
+          text: `${data.name} booked a virtual visit on ${data.date} at ${time12}.\nMeet: ${meetLink}\nPhone: ${data.phone}\nEmail: ${data.email}`,
+        });
+      }
+    } else {
+      const mail = buildClinicConfirmEmail({
+        patientName: data.name,
+        date: data.date,
+        time12,
+        doctorName: config.doctor,
+        note: config.confirmationNote,
+      });
+      const result = await sendMail({
+        to: data.email,
+        subject: mail.subject,
+        text: mail.text,
+      });
+      emailSent = result.sent;
+
+      if (config.notifyOnBooking && config.notifyEmail) {
+        await sendMail({
+          to: config.notifyEmail,
+          subject: `New clinic booking — ${data.date} ${time12}`,
+          text: `${data.name} booked a clinic visit on ${data.date} at ${time12}.\nPhone: ${data.phone}\nEmail: ${data.email}`,
+        });
+      }
+    }
+
     const message = isVirtual
-      ? `Confirmed for ${data.date} at ${data.time}. Your Google Meet link is ready — join at the scheduled time. Confirmation emails go to you and the doctor.`
-      : `Confirmed for ${data.date} at ${data.time} (clinic visit). Confirmation emails go to you and the doctor. ${config.confirmationNote}`;
+      ? `Confirmed for ${data.date} at ${time12}. Save your Google Meet details below${emailSent ? " — a copy was also emailed to you" : " (and screenshot this page)"}.`
+      : `Confirmed for ${data.date} at ${time12} (clinic visit).${emailSent ? " Confirmation emailed to you." : ""} ${config.confirmationNote}`;
 
     return NextResponse.json({
       ok: true,
       message,
       status: appointment.status,
       meetLink: appointment.meetLink,
+      meetCode: isVirtual ? meetCode : null,
+      emailSent,
       appointmentId: appointment.id,
+      timeLabel: time12,
     });
   } catch {
     return NextResponse.json(
@@ -205,7 +257,7 @@ export async function GET(request: Request) {
         date,
         status: { in: ["pending", "confirmed"] },
       },
-      select: { time: true },
+      select: { time: true, visitType: true },
     }),
     getBlockedDates(),
     getClinicConfig(),

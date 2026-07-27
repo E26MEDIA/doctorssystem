@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ServiceOption = { title: string; slug: string };
-
 type Status = "idle" | "loading" | "success" | "error";
 
 function to12h(hhmm: string): string {
@@ -13,7 +12,7 @@ function to12h(hhmm: string): string {
   if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
   const ampm = h < 12 ? "AM" : "PM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${mStr.padStart(2, "0")} ${ampm}`;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
 const VISIT_TYPES = [
@@ -41,6 +40,9 @@ export function AppointmentForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [meetLink, setMeetLink] = useState("");
+  const [meetCode, setMeetCode] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [visitSlug, setVisitSlug] = useState<string>("clinic-consultation");
   const [form, setForm] = useState({
     name: "",
@@ -60,6 +62,7 @@ export function AppointmentForm() {
   }, [services, visitSlug]);
 
   const isVirtual = selectedService.slug === "virtual-consultation";
+  const openSlots = timeSlots.filter((t) => !booked.includes(t));
 
   useEffect(() => {
     async function boot() {
@@ -72,7 +75,6 @@ export function AppointmentForm() {
         }),
       );
       setServices(list);
-      setTimeSlots(data.timeSlots ?? []);
       setBookingEnabled(data.clinic?.bookingEnabled ?? true);
       const lead = data.clinic?.minLeadDays ?? 0;
       const maxAdv = data.clinic?.maxAdvanceDays ?? 60;
@@ -104,14 +106,21 @@ export function AppointmentForm() {
         if (cancelled) return;
         setBooked(data.booked ?? []);
         setDayBlocked(Boolean(data.blocked));
-        if (data.timeSlots?.length) setTimeSlots(data.timeSlots);
+        // Always replace — never keep previous day's slots
+        setTimeSlots(Array.isArray(data.timeSlots) ? data.timeSlots : []);
+        setForm((f) =>
+          data.timeSlots?.includes(f.time) ? f : { ...f, time: "" },
+        );
         if (data.minDate) setMinDate(data.minDate);
         if (data.maxDate) setMaxDate(data.maxDate);
         if (typeof data.bookingEnabled === "boolean") {
           setBookingEnabled(data.bookingEnabled);
         }
       } catch {
-        if (!cancelled) setBooked([]);
+        if (!cancelled) {
+          setBooked([]);
+          setTimeSlots([]);
+        }
       }
     }
     load();
@@ -125,6 +134,9 @@ export function AppointmentForm() {
     setStatus("loading");
     setMessage("");
     setMeetLink("");
+    setMeetCode("");
+    setEmailSent(false);
+    setCopied(false);
 
     try {
       const res = await fetch("/api/appointments", {
@@ -146,6 +158,9 @@ export function AppointmentForm() {
       setStatus("success");
       setMessage(data.message);
       if (data.meetLink) setMeetLink(data.meetLink);
+      if (data.meetCode) setMeetCode(data.meetCode);
+      setEmailSent(Boolean(data.emailSent));
+      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
       setForm({
         name: "",
         email: "",
@@ -153,10 +168,20 @@ export function AppointmentForm() {
         time: "",
         notes: "",
       });
-      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
     } catch {
       setStatus("error");
       setMessage("Network error. Please try again.");
+    }
+  }
+
+  async function copyMeet() {
+    if (!meetLink) return;
+    try {
+      await navigator.clipboard.writeText(meetLink);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
     }
   }
 
@@ -167,8 +192,6 @@ export function AppointmentForm() {
       </p>
     );
   }
-
-  const openSlots = timeSlots.filter((t) => !booked.includes(t));
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -232,43 +255,54 @@ export function AppointmentForm() {
         </label>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="field">
-          <span>Preferred date</span>
-          <input
-            required
-            type="date"
-            min={minDate}
-            max={maxDate}
-            value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setForm((f) => ({ ...f, time: "" }));
-            }}
-          />
-        </label>
-        <label className="field">
-          <span>Open slot</span>
-          <select
-            required
-            value={form.time}
-            onChange={(e) => setForm({ ...form, time: e.target.value })}
-            disabled={dayBlocked || openSlots.length === 0}
-          >
-            <option value="">
-              {dayBlocked
-                ? "Clinic closed this day"
-                : openSlots.length
-                  ? "Select a slot"
-                  : "No open slots"}
-            </option>
-            {openSlots.map((slot) => (
-              <option key={slot} value={slot}>
-                {to12h(slot)}
-              </option>
-            ))}
-          </select>
-        </label>
+      <label className="field">
+        <span>Preferred date</span>
+        <input
+          required
+          type="date"
+          min={minDate}
+          max={maxDate}
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setForm((f) => ({ ...f, time: "" }));
+          }}
+        />
+      </label>
+
+      <div>
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+          Open slot
+        </p>
+        {dayBlocked ? (
+          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+            Clinic closed this day
+          </p>
+        ) : openSlots.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+            No open slots for this date
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {openSlots.map((slot) => {
+              const active = form.time === slot;
+              return (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => setForm({ ...form, time: slot })}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    active
+                      ? "border-[var(--teal)] bg-[var(--teal)] text-white"
+                      : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
+                  }`}
+                >
+                  {to12h(slot)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <label className="field">
@@ -283,8 +317,9 @@ export function AppointmentForm() {
 
       {isVirtual && (
         <p className="rounded-xl bg-[var(--sand)] px-4 py-3 text-sm text-[var(--ink-soft)]">
-          Virtual booking is confirmed right away. Your Google Meet link will be
-          emailed to you and available for the doctor at the scheduled time.
+          After you confirm, your Google Meet link and meeting code appear on
+          this page — copy or screenshot them. A confirmation email is also sent
+          when email delivery is configured.
         </p>
       )}
 
@@ -305,19 +340,46 @@ export function AppointmentForm() {
           }`}
         >
           <p>{message}</p>
-          {meetLink && (
-            <p className="mt-2">
-              Meet link:{" "}
-              <a
-                href={meetLink}
-                className="underline underline-offset-2"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {meetLink}
-              </a>
+        </div>
+      )}
+
+      {status === "success" && meetLink && (
+        <div className="rounded-2xl border border-[var(--teal)] bg-white p-5 shadow-[0_12px_40px_rgba(6,51,44,0.08)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+            Google Meet details
+          </p>
+          <p className="display mt-2 text-2xl text-[var(--deep)]">
+            Save this — screenshot or copy
+          </p>
+          <div className="mt-4 rounded-xl bg-[var(--sand)] px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+              Meeting code
             </p>
-          )}
+            <p className="mt-1 font-mono text-xl font-semibold text-[var(--deep)]">
+              {meetCode || meetLink.replace("https://meet.google.com/", "")}
+            </p>
+          </div>
+          <div className="mt-3 break-all rounded-xl border border-[var(--line)] px-4 py-3 text-sm text-[var(--ink)]">
+            {meetLink}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="button" className="btn-primary" onClick={copyMeet}>
+              {copied ? "Copied!" : "Copy Meet link"}
+            </button>
+            <a
+              href={meetLink}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost"
+            >
+              Open Meet
+            </a>
+          </div>
+          <p className="mt-4 text-sm text-[var(--ink-soft)]">
+            {emailSent
+              ? "Confirmation email sent with this Meet link."
+              : "Keep a screenshot of this card. Email delivery activates once SMTP is connected on the server."}
+          </p>
         </div>
       )}
     </form>

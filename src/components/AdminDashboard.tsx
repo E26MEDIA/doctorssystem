@@ -3,9 +3,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   ClinicConfig,
+  DateScheduleRow,
   HourRow,
   ServiceItem,
-  WeeklyScheduleRow,
 } from "@/lib/settings";
 
 type Appointment = {
@@ -63,20 +63,8 @@ const emptySettings = (): ClinicConfig => ({
   hours: [{ day: "Monday – Friday", time: "9:00 AM – 6:00 PM" }],
   social: { instagram: "", linkedin: "" },
   timeSlots: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
-  weeklySchedule: [
-    { dayKey: "monday", label: "Monday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
-    { dayKey: "tuesday", label: "Tuesday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
-    {
-      dayKey: "wednesday",
-      label: "Wednesday",
-      enabled: true,
-      slots: ["11:00", "12:00", "16:00"],
-    },
-    { dayKey: "thursday", label: "Thursday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
-    { dayKey: "friday", label: "Friday", enabled: true, slots: ["11:00", "12:00", "16:00"] },
-    { dayKey: "saturday", label: "Saturday", enabled: true, slots: ["11:00", "12:00"] },
-    { dayKey: "sunday", label: "Sunday", enabled: false, slots: [] },
-  ],
+  weeklySchedule: [],
+  dateSchedule: [],
   bookingEnabled: true,
   minLeadDays: 1,
   maxAdvanceDays: 60,
@@ -109,53 +97,53 @@ const ALL_SLOTS: string[] = Array.from({ length: 28 }, (_, i) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 });
 
-// ── Weekly Schedule Editor ────────────────────────────────────────────────────
+// ── Date Schedule Editor (real calendar dates) ────────────────────────────────
 
-function WeeklyScheduleEditor({
+function DateScheduleEditor({
   schedule,
   onChange,
 }: {
-  schedule: WeeklyScheduleRow[];
-  onChange: (updated: WeeklyScheduleRow[]) => void;
+  schedule: DateScheduleRow[];
+  onChange: (updated: DateScheduleRow[]) => void;
 }) {
-  function updateDay(dayKey: string, patch: Partial<WeeklyScheduleRow>) {
+  function updateDay(date: string, patch: Partial<DateScheduleRow>) {
     onChange(
-      schedule.map((row) =>
-        row.dayKey === dayKey ? { ...row, ...patch } : row,
-      ),
+      schedule.map((row) => (row.date === date ? { ...row, ...patch } : row)),
     );
   }
 
-  function toggleSlot(dayKey: string, slot: string, currentSlots: string[]) {
+  function toggleSlot(date: string, slot: string, currentSlots: string[]) {
     const next = currentSlots.includes(slot)
       ? currentSlots.filter((s) => s !== slot)
       : [...currentSlots, slot].sort();
-    updateDay(dayKey, { slots: next });
+    updateDay(date, { slots: next });
   }
 
   return (
     <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
       <h3 className="text-lg font-semibold text-[var(--deep)]">
-        Weekly consultation schedule
+        Upcoming consultation schedule
       </h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Toggle each day on/off. Tap a time card to add or remove that slot.
-        Booked slots are automatically locked once a patient confirms.
+        Real calendar dates for the next 2 weeks. Tap time cards to open or close
+        slots. Once a patient books (clinic or virtual), that time locks for everyone.
       </p>
 
       <div className="mt-5 space-y-4">
         {schedule.map((row) => (
           <div
-            key={row.dayKey}
+            key={row.date}
             className={`rounded-xl border bg-white p-4 transition-opacity ${
-              row.enabled ? "border-[var(--line)]" : "border-[var(--line)] opacity-60"
+              row.enabled
+                ? "border-[var(--line)]"
+                : "border-[var(--line)] opacity-60"
             }`}
           >
-            {/* Day header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-semibold text-[var(--deep)]">{row.label}</p>
-                <p className="text-sm text-[var(--muted)]">
+                <p className="text-xs text-[var(--muted)]">{row.date}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
                   {row.enabled
                     ? row.slots.length
                       ? row.slots.map(to12h).join(" · ")
@@ -165,7 +153,9 @@ function WeeklyScheduleEditor({
               </div>
               <button
                 type="button"
-                onClick={() => updateDay(row.dayKey, { enabled: !row.enabled })}
+                onClick={() =>
+                  updateDay(row.date, { enabled: !row.enabled })
+                }
                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                   row.enabled
                     ? "bg-[var(--teal)] text-white"
@@ -176,7 +166,6 @@ function WeeklyScheduleEditor({
               </button>
             </div>
 
-            {/* Slot cards grid */}
             {row.enabled && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {ALL_SLOTS.map((slot) => {
@@ -185,7 +174,7 @@ function WeeklyScheduleEditor({
                     <button
                       key={slot}
                       type="button"
-                      onClick={() => toggleSlot(row.dayKey, slot, row.slots)}
+                      onClick={() => toggleSlot(row.date, slot, row.slots)}
                       className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
                         active
                           ? "border-[var(--teal)] bg-[var(--teal)] text-white shadow-sm"
@@ -495,27 +484,6 @@ export function AdminDashboard() {
     setSettings((s) => ({
       ...s,
       hours: s.hours.map((h, i) => (i === index ? { ...h, [key]: value } : h)),
-    }));
-  }
-
-  function updateWeeklyDay(
-    dayKey: WeeklyScheduleRow["dayKey"],
-    patch: Partial<WeeklyScheduleRow>,
-  ) {
-    setSettings((s) => ({
-      ...s,
-      weeklySchedule: s.weeklySchedule.map((row) =>
-        row.dayKey === dayKey ? { ...row, ...patch } : row,
-      ),
-      timeSlots: Array.from(
-        new Set(
-          s.weeklySchedule
-            .map((row) =>
-              row.dayKey === dayKey ? { ...row, ...patch } : row,
-            )
-            .flatMap((row) => (row.enabled ? row.slots : [])),
-        ),
-      ).sort(),
     }));
   }
 
@@ -1201,10 +1169,20 @@ export function AdminDashboard() {
             </label>
           </div>
 
-          <WeeklyScheduleEditor
-            schedule={settings.weeklySchedule}
-            onChange={(weeklySchedule) =>
-              setSettings((s) => ({ ...s, weeklySchedule }))
+          <DateScheduleEditor
+            schedule={settings.dateSchedule}
+            onChange={(dateSchedule) =>
+              setSettings((s) => ({
+                ...s,
+                dateSchedule,
+                timeSlots: Array.from(
+                  new Set(
+                    dateSchedule.flatMap((row) =>
+                      row.enabled ? row.slots : [],
+                    ),
+                  ),
+                ).sort(),
+              }))
             }
           />
           <SaveBar
