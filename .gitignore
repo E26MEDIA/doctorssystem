@@ -23,6 +23,11 @@
 # misc
 .DS_Store
 *.pem
+*.db
+*.db-journal
+
+# local postgres / tunnel logs
+cf-tunnel.log
 
 # debug
 npm-debug.log*
@@ -50,3 +55,8 @@ prisma/*.db
 prisma/*.db-journal
 *.db
 *.db-journal
+
+cloudflared
+cf-tunnel.log
+*.log
+

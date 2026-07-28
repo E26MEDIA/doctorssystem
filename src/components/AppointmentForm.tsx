@@ -1,10 +1,32 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ServiceOption = { title: string; slug: string };
-
 type Status = "idle" | "loading" | "success" | "error";
+
+function to12h(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+const VISIT_TYPES = [
+  {
+    slug: "clinic-consultation",
+    title: "Clinic Consultation",
+    blurb: "In-person visit at the hospital clinic.",
+  },
+  {
+    slug: "virtual-consultation",
+    title: "Virtual Consultation",
+    blurb: "Video visit with Google Meet link on confirm.",
+  },
+] as const;
 
 export function AppointmentForm() {
   const [minDate, setMinDate] = useState("");
@@ -17,14 +39,30 @@ export function AppointmentForm() {
   const [dayBlocked, setDayBlocked] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [meetLink, setMeetLink] = useState("");
+  const [meetCode, setMeetCode] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [visitSlug, setVisitSlug] = useState<string>("clinic-consultation");
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     time: "",
-    service: "",
     notes: "",
   });
+
+  const selectedService = useMemo(() => {
+    const fromApi = services.find((s) => s.slug === visitSlug);
+    if (fromApi) return fromApi;
+    const fallback = VISIT_TYPES.find((v) => v.slug === visitSlug);
+    return fallback
+      ? { title: fallback.title, slug: fallback.slug }
+      : { title: "Clinic Consultation", slug: "clinic-consultation" };
+  }, [services, visitSlug]);
+
+  const isVirtual = selectedService.slug === "virtual-consultation";
+  const openSlots = timeSlots.filter((t) => !booked.includes(t));
 
   useEffect(() => {
     async function boot() {
@@ -37,9 +75,8 @@ export function AppointmentForm() {
         }),
       );
       setServices(list);
-      setTimeSlots(data.timeSlots ?? []);
       setBookingEnabled(data.clinic?.bookingEnabled ?? true);
-      const lead = data.clinic?.minLeadDays ?? 1;
+      const lead = data.clinic?.minLeadDays ?? 0;
       const maxAdv = data.clinic?.maxAdvanceDays ?? 60;
       const minD = new Date();
       minD.setDate(minD.getDate() + lead);
@@ -50,9 +87,11 @@ export function AppointmentForm() {
       setMinDate(minStr);
       setMaxDate(maxStr);
       setDate(minStr);
-      if (list[0]) {
-        setForm((f) => ({ ...f, service: list[0].title }));
-      }
+      const hasClinic = list.some((s) => s.slug === "clinic-consultation");
+      const hasVirtual = list.some((s) => s.slug === "virtual-consultation");
+      if (hasClinic) setVisitSlug("clinic-consultation");
+      else if (hasVirtual) setVisitSlug("virtual-consultation");
+      else if (list[0]) setVisitSlug(list[0].slug);
     }
     boot();
   }, []);
@@ -67,14 +106,21 @@ export function AppointmentForm() {
         if (cancelled) return;
         setBooked(data.booked ?? []);
         setDayBlocked(Boolean(data.blocked));
-        if (data.timeSlots?.length) setTimeSlots(data.timeSlots);
+        // Always replace — never keep previous day's slots
+        setTimeSlots(Array.isArray(data.timeSlots) ? data.timeSlots : []);
+        setForm((f) =>
+          data.timeSlots?.includes(f.time) ? f : { ...f, time: "" },
+        );
         if (data.minDate) setMinDate(data.minDate);
         if (data.maxDate) setMaxDate(data.maxDate);
         if (typeof data.bookingEnabled === "boolean") {
           setBookingEnabled(data.bookingEnabled);
         }
       } catch {
-        if (!cancelled) setBooked([]);
+        if (!cancelled) {
+          setBooked([]);
+          setTimeSlots([]);
+        }
       }
     }
     load();
@@ -87,12 +133,21 @@ export function AppointmentForm() {
     e.preventDefault();
     setStatus("loading");
     setMessage("");
+    setMeetLink("");
+    setMeetCode("");
+    setEmailSent(false);
+    setCopied(false);
 
     try {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, date }),
+        body: JSON.stringify({
+          ...form,
+          date,
+          service: selectedService.title,
+          visitType: selectedService.slug,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -102,42 +157,83 @@ export function AppointmentForm() {
       }
       setStatus("success");
       setMessage(data.message);
-      setForm((f) => ({
-        ...f,
+      if (data.meetLink) setMeetLink(data.meetLink);
+      if (data.meetCode) setMeetCode(data.meetCode);
+      setEmailSent(Boolean(data.emailSent));
+      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
+      setForm({
         name: "",
         email: "",
         phone: "",
         time: "",
         notes: "",
-      }));
-      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
+      });
     } catch {
       setStatus("error");
       setMessage("Network error. Please try again.");
     }
   }
 
+  async function copyMeet() {
+    if (!meetLink) return;
+    try {
+      await navigator.clipboard.writeText(meetLink);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   if (!bookingEnabled) {
     return (
-      <p className="rounded-xl border border-[var(--line)] bg-[var(--mist)] p-6 text-[var(--ink-soft)]">
-        Online booking is temporarily closed. Please call the clinic or use the
-        contact form.
+      <p className="text-[var(--ink-soft)]">
+        Online booking is temporarily closed. Please call the clinic.
       </p>
     );
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <div className="grid gap-5 md:grid-cols-2">
-        <label className="field">
-          <span>Full name</span>
-          <input
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Your name"
-          />
-        </label>
+      <div>
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+          Visit type
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {VISIT_TYPES.map((visit) => {
+            const available =
+              services.length === 0 ||
+              services.some((s) => s.slug === visit.slug);
+            if (!available) return null;
+            const active = visitSlug === visit.slug;
+            return (
+              <button
+                key={visit.slug}
+                type="button"
+                className={`visit-card text-left ${active ? "active" : ""}`}
+                onClick={() => setVisitSlug(visit.slug)}
+              >
+                <p className="font-medium text-[var(--deep)]">{visit.title}</p>
+                <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                  {visit.blurb}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <label className="field">
+        <span>Full name</span>
+        <input
+          required
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Your name"
+        />
+      </label>
+
+      <div className="grid gap-5 sm:grid-cols-2">
         <label className="field">
           <span>Email</span>
           <input
@@ -154,62 +250,52 @@ export function AppointmentForm() {
             required
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            placeholder="+91 …"
+            placeholder="+91 ..."
           />
         </label>
-        <label className="field">
-          <span>Service</span>
-          <select
-            required
-            value={form.service}
-            onChange={(e) => setForm({ ...form, service: e.target.value })}
-          >
-            {services.length === 0 && <option value="">Loading…</option>}
-            {services.map((s) => (
-              <option key={s.slug} value={s.title}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Preferred date</span>
-          <input
-            required
-            type="date"
-            min={minDate}
-            max={maxDate}
-            value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setForm({ ...form, time: "" });
-            }}
-          />
-        </label>
-        <label className="field">
-          <span>Preferred time</span>
+      </div>
+
+      <label className="field">
+        <span>Preferred date</span>
+        <input
+          required
+          type="date"
+          min={minDate}
+          max={maxDate}
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setForm((f) => ({ ...f, time: "" }));
+          }}
+        />
+      </label>
+
+      <label className="field">
+        <span>Open slot</span>
+        {dayBlocked ? (
+          <p className="mt-1 text-sm text-[var(--ink-soft)]">
+            Clinic closed this day
+          </p>
+        ) : (
           <select
             required
             value={form.time}
             onChange={(e) => setForm({ ...form, time: e.target.value })}
-            disabled={dayBlocked}
+            disabled={openSlots.length === 0}
           >
             <option value="">
-              {dayBlocked ? "Clinic closed this day" : "Select a slot"}
+              {openSlots.length === 0
+                ? "No open slots for this date"
+                : "Select a time"}
             </option>
-            {!dayBlocked &&
-              timeSlots.map((slot) => {
-                const taken = booked.includes(slot);
-                return (
-                  <option key={slot} value={slot} disabled={taken}>
-                    {slot}
-                    {taken ? " (taken)" : ""}
-                  </option>
-                );
-              })}
+            {openSlots.map((slot) => (
+              <option key={slot} value={slot}>
+                {to12h(slot)}
+              </option>
+            ))}
           </select>
-        </label>
-      </div>
+        )}
+      </label>
 
       <label className="field">
         <span>Notes (optional)</span>
@@ -217,27 +303,76 @@ export function AppointmentForm() {
           rows={4}
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          placeholder="Symptoms, goals, or anything we should know before your visit."
+          placeholder="Symptoms, reports, or anything we should know."
         />
       </label>
 
+      {isVirtual && (
+        <p className="rounded-xl bg-[var(--sand)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+          After you confirm, your Google Meet link and meeting code appear on
+          this page — copy or screenshot them. A confirmation email is also sent
+          when email delivery is configured.
+        </p>
+      )}
+
       <button
         type="submit"
-        className="btn-primary w-full md:w-auto"
-        disabled={status === "loading" || dayBlocked}
+        className="btn-primary w-full"
+        disabled={status === "loading" || dayBlocked || !form.time}
       >
-        {status === "loading" ? "Sending…" : "Request appointment"}
+        {status === "loading" ? "Booking..." : "Confirm booking"}
       </button>
 
       {message && (
-        <p
-          className={`text-sm ${
-            status === "success" ? "text-[var(--teal)]" : "text-red-700"
+        <div
+          className={`rounded-xl px-4 py-3 text-sm ${
+            status === "success"
+              ? "bg-emerald-50 text-emerald-900"
+              : "bg-rose-50 text-rose-900"
           }`}
-          role="status"
         >
-          {message}
-        </p>
+          <p>{message}</p>
+        </div>
+      )}
+
+      {status === "success" && meetLink && (
+        <div className="rounded-2xl border border-[var(--teal)] bg-white p-5 shadow-[0_12px_40px_rgba(6,51,44,0.08)]">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+            Google Meet details
+          </p>
+          <p className="display mt-2 text-2xl text-[var(--deep)]">
+            Save this — screenshot or copy
+          </p>
+          <div className="mt-4 rounded-xl bg-[var(--sand)] px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+              Meeting code
+            </p>
+            <p className="mt-1 font-mono text-xl font-semibold text-[var(--deep)]">
+              {meetCode || meetLink.replace("https://meet.google.com/", "")}
+            </p>
+          </div>
+          <div className="mt-3 break-all rounded-xl border border-[var(--line)] px-4 py-3 text-sm text-[var(--ink)]">
+            {meetLink}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="button" className="btn-primary" onClick={copyMeet}>
+              {copied ? "Copied!" : "Copy Meet link"}
+            </button>
+            <a
+              href={meetLink}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost"
+            >
+              Open Meet
+            </a>
+          </div>
+          <p className="mt-4 text-sm text-[var(--ink-soft)]">
+            {emailSent
+              ? "Confirmation email sent with this Meet link."
+              : "Keep a screenshot of this card. Email delivery activates once SMTP is connected on the server."}
+          </p>
+        </div>
       )}
     </form>
   );
