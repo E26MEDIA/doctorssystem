@@ -13,6 +13,37 @@ export const appointmentSchema = z.object({
   time: z.string().min(1, "Choose a time"),
   service: z.string().min(1, "Choose a service"),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
+  visitType: z.enum(["in_clinic", "online"]).default("in_clinic"),
+  /** Demo checkout only — no real gateway yet. */
+  payment: z
+    .object({
+      cardName: z.string().trim().min(2).max(80),
+      cardNumber: z
+        .string()
+        .trim()
+        .transform((v) => v.replace(/\s+/g, ""))
+        .refine((v) => /^\d{12,19}$/.test(v), "Enter a valid card number"),
+      expiry: z
+        .string()
+        .trim()
+        .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Use MM/YY"),
+      cvv: z.string().trim().regex(/^\d{3,4}$/, "Enter a valid CVV"),
+    })
+    .optional(),
+});
+
+export const demoPaymentSchema = z.object({
+  cardName: z.string().trim().min(2).max(80),
+  cardNumber: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s+/g, ""))
+    .refine((v) => /^\d{12,19}$/.test(v), "Enter a valid card number"),
+  expiry: z
+    .string()
+    .trim()
+    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Use MM/YY"),
+  cvv: z.string().trim().regex(/^\d{3,4}$/, "Enter a valid CVV"),
 });
 
 export const contactSchema = z.object({

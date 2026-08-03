@@ -26,7 +26,9 @@ export default async function BookPage() {
               Request a visit
             </h1>
             <p className="mt-5 text-lg leading-relaxed text-[var(--ink-soft)]">
-              {clinic.confirmationNote} For urgent symptoms, please seek
+              Book an in-clinic visit, or choose online video — pay the
+              consultation fee here and join Google Meet from this website.
+              {` ${clinic.confirmationNote}`} For urgent symptoms, please seek
               emergency care.
             </p>
             <div className="mt-8 space-y-3 border-t border-[var(--line)] pt-8 text-sm text-[var(--ink-soft)]">

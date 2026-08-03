@@ -8,17 +8,23 @@ datasource db {
 }
 
 model Appointment {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String
-  date      String
-  time      String
-  service   String
-  notes     String?
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String
+  date           String
+  time           String
+  service        String
+  notes          String?
+  status         String   @default("pending")
+  visitType      String   @default("in_clinic") // in_clinic | online
+  paymentStatus  String   @default("not_required") // not_required | unpaid | paid
+  paymentAmount  Int      @default(0)
+  paymentRef     String?
+  meetLink       String?
+  joinToken      String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model ContactMessage {

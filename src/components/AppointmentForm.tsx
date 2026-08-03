@@ -1,10 +1,20 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ServiceOption = { title: string; slug: string };
-
 type Status = "idle" | "loading" | "success" | "error";
+type Step = "details" | "payment" | "done";
+type VisitType = "in_clinic" | "online";
+
+function formatInr(amount: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 export function AppointmentForm() {
   const [minDate, setMinDate] = useState("");
@@ -15,8 +25,11 @@ export function AppointmentForm() {
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [bookingEnabled, setBookingEnabled] = useState(true);
   const [dayBlocked, setDayBlocked] = useState(false);
+  const [videoFee, setVideoFee] = useState(799);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [step, setStep] = useState<Step>("details");
+  const [joinUrl, setJoinUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -24,7 +37,19 @@ export function AppointmentForm() {
     time: "",
     service: "",
     notes: "",
+    visitType: "in_clinic" as VisitType,
   });
+  const [payment, setPayment] = useState({
+    cardName: "",
+    cardNumber: "",
+    expiry: "",
+    cvv: "",
+  });
+
+  const prefersVideoService = useMemo(() => {
+    const selected = services.find((s) => s.title === form.service);
+    return selected?.slug === "teleconsult" || /video|tele/i.test(form.service);
+  }, [form.service, services]);
 
   useEffect(() => {
     async function boot() {
@@ -39,6 +64,9 @@ export function AppointmentForm() {
       setServices(list);
       setTimeSlots(data.timeSlots ?? []);
       setBookingEnabled(data.clinic?.bookingEnabled ?? true);
+      if (typeof data.clinic?.videoConsultFee === "number") {
+        setVideoFee(data.clinic.videoConsultFee);
+      }
       const lead = data.clinic?.minLeadDays ?? 1;
       const maxAdv = data.clinic?.maxAdvanceDays ?? 60;
       const minD = new Date();
@@ -58,6 +86,12 @@ export function AppointmentForm() {
   }, []);
 
   useEffect(() => {
+    if (prefersVideoService && form.visitType !== "online") {
+      setForm((f) => ({ ...f, visitType: "online" }));
+    }
+  }, [prefersVideoService, form.visitType]);
+
+  useEffect(() => {
     if (!date) return;
     let cancelled = false;
     async function load() {
@@ -73,6 +107,9 @@ export function AppointmentForm() {
         if (typeof data.bookingEnabled === "boolean") {
           setBookingEnabled(data.bookingEnabled);
         }
+        if (typeof data.videoConsultFee === "number") {
+          setVideoFee(data.videoConsultFee);
+        }
       } catch {
         if (!cancelled) setBooked([]);
       }
@@ -83,8 +120,18 @@ export function AppointmentForm() {
     };
   }, [date]);
 
-  async function onSubmit(e: FormEvent) {
+  function goToPayment(e: FormEvent) {
     e.preventDefault();
+    setMessage("");
+    if (form.visitType === "online") {
+      setStep("payment");
+      setStatus("idle");
+      return;
+    }
+    void submitBooking();
+  }
+
+  async function submitBooking(withPayment = false) {
     setStatus("loading");
     setMessage("");
 
@@ -92,7 +139,13 @@ export function AppointmentForm() {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, date }),
+        body: JSON.stringify({
+          ...form,
+          date,
+          ...(withPayment || form.visitType === "online"
+            ? { payment }
+            : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -102,6 +155,9 @@ export function AppointmentForm() {
       }
       setStatus("success");
       setMessage(data.message);
+      setJoinUrl(data.joinUrl ?? null);
+      setStep("done");
+      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
       setForm((f) => ({
         ...f,
         name: "",
@@ -110,11 +166,16 @@ export function AppointmentForm() {
         time: "",
         notes: "",
       }));
-      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
+      setPayment({ cardName: "", cardNumber: "", expiry: "", cvv: "" });
     } catch {
       setStatus("error");
       setMessage("Network error. Please try again.");
     }
+  }
+
+  async function onPay(e: FormEvent) {
+    e.preventDefault();
+    await submitBooking(true);
   }
 
   if (!bookingEnabled) {
@@ -126,8 +187,203 @@ export function AppointmentForm() {
     );
   }
 
+  if (step === "done") {
+    return (
+      <div className="space-y-5">
+        <div className="rounded-xl border border-[var(--teal)]/30 bg-[color-mix(in_oklab,var(--teal)_10%,white)] p-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+            Request received
+          </p>
+          <p className="mt-2 text-[var(--ink)]">{message}</p>
+          {joinUrl && (
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href={joinUrl} className="btn-primary">
+                Join Google Meet on this site
+              </Link>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  setStep("details");
+                  setStatus("idle");
+                  setMessage("");
+                  setJoinUrl(null);
+                }}
+              >
+                Book another
+              </button>
+            </div>
+          )}
+          {!joinUrl && (
+            <button
+              type="button"
+              className="btn-ghost mt-5"
+              onClick={() => {
+                setStep("details");
+                setStatus("idle");
+                setMessage("");
+              }}
+            >
+              Book another
+            </button>
+          )}
+        </div>
+        {joinUrl && (
+          <p className="text-sm text-[var(--muted)]">
+            Demo mode: Meet link and payment gateway can be configured later.
+            Save your consult page —{" "}
+            <Link href={joinUrl} className="text-[var(--teal)] underline">
+              {joinUrl}
+            </Link>
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (step === "payment") {
+    return (
+      <form onSubmit={onPay} className="space-y-5">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--mist)] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+            Video consultation fee
+          </p>
+          <p className="display mt-1 text-3xl text-[var(--navy)]">
+            {formatInr(videoFee)}
+          </p>
+          <p className="mt-2 text-sm text-[var(--ink-soft)]">
+            Demo checkout — no real charge. Use any test card (e.g. 4242 4242
+            4242 4242).
+          </p>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="field md:col-span-2">
+            <span>Name on card</span>
+            <input
+              required
+              value={payment.cardName}
+              onChange={(e) =>
+                setPayment({ ...payment, cardName: e.target.value })
+              }
+              placeholder="As printed on card"
+            />
+          </label>
+          <label className="field md:col-span-2">
+            <span>Card number</span>
+            <input
+              required
+              inputMode="numeric"
+              autoComplete="cc-number"
+              value={payment.cardNumber}
+              onChange={(e) =>
+                setPayment({
+                  ...payment,
+                  cardNumber: e.target.value.replace(/[^\d\s]/g, ""),
+                })
+              }
+              placeholder="4242 4242 4242 4242"
+            />
+          </label>
+          <label className="field">
+            <span>Expiry (MM/YY)</span>
+            <input
+              required
+              value={payment.expiry}
+              onChange={(e) =>
+                setPayment({ ...payment, expiry: e.target.value })
+              }
+              placeholder="12/28"
+            />
+          </label>
+          <label className="field">
+            <span>CVV</span>
+            <input
+              required
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              value={payment.cvv}
+              onChange={(e) =>
+                setPayment({
+                  ...payment,
+                  cvv: e.target.value.replace(/\D/g, "").slice(0, 4),
+                })
+              }
+              placeholder="123"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={status === "loading"}
+          >
+            {status === "loading"
+              ? "Processing…"
+              : `Pay ${formatInr(videoFee)} & confirm`}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setStep("details")}
+            disabled={status === "loading"}
+          >
+            Back
+          </button>
+        </div>
+
+        {message && (
+          <p className="text-sm text-red-700" role="status">
+            {message}
+          </p>
+        )}
+      </form>
+    );
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form onSubmit={goToPayment} className="space-y-5">
+      <fieldset className="space-y-3">
+        <legend className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+          Visit type
+        </legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              {
+                value: "in_clinic" as const,
+                title: "In clinic",
+                blurb: "Visit Indiranagar in person",
+              },
+              {
+                value: "online" as const,
+                title: "Online video",
+                blurb: `Pay ${formatInr(videoFee)} · join Google Meet here`,
+              },
+            ] as const
+          ).map((opt) => {
+            const active = form.visitType === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setForm({ ...form, visitType: opt.value })}
+                className={`rounded-xl border px-4 py-3 text-left transition ${
+                  active
+                    ? "border-[var(--teal)] bg-[color-mix(in_oklab,var(--teal)_10%,white)] shadow-[0_8px_24px_rgba(18,184,134,0.12)]"
+                    : "border-[var(--line)] bg-white hover:border-[var(--teal)]/50"
+                }`}
+              >
+                <p className="font-medium text-[var(--ink)]">{opt.title}</p>
+                <p className="mt-1 text-sm text-[var(--ink-soft)]">{opt.blurb}</p>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="field">
           <span>Full name</span>
@@ -226,7 +482,11 @@ export function AppointmentForm() {
         className="btn-primary w-full md:w-auto"
         disabled={status === "loading" || dayBlocked}
       >
-        {status === "loading" ? "Sending…" : "Request appointment"}
+        {status === "loading"
+          ? "Sending…"
+          : form.visitType === "online"
+            ? "Continue to payment"
+            : "Request appointment"}
       </button>
 
       {message && (

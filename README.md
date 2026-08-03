@@ -6,6 +6,7 @@ Full-stack clinic site for **Dr. Anika Rao, MD** (Internal Medicine), built with
 
 - Marketing pages: Home, About, Services, Journal, Contact
 - Online appointment booking with conflict checks
+- Video consults: demo fee payment + Google Meet join room on-site (`/consult/[token]`)
 - Contact form with message storage
 - Admin dashboard (`/admin`) to confirm appointments and read messages
 - Responsive design with scroll reveal motion
@@ -39,6 +40,8 @@ Copy `.env.example` to `.env`:
 | `DATABASE_URL` | SQLite path (`file:./dev.db`) |
 | `ADMIN_PASSWORD` | Admin login password |
 | `ADMIN_SECRET` | Session signing secret |
+| `NEXT_PUBLIC_GOOGLE_MEET_URL` | Demo Google Meet link (configure later) |
+| `NEXT_PUBLIC_VIDEO_CONSULT_FEE` | Online consult fee in INR (demo checkout) |
 
 ## Production
 

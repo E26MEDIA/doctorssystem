@@ -16,6 +16,15 @@ import {
   rateLimitResponse,
   readJsonLimited,
 } from "@/lib/security";
+import {
+  formatInr,
+  getDemoMeetLink,
+  getVideoConsultFeeInr,
+} from "@/lib/telehealth";
+
+function demoPaymentRef() {
+  return `DEMO-${Date.now().toString(36).toUpperCase()}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -104,9 +113,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const status = config.autoConfirm ? "confirmed" : "pending";
+    const online = data.visitType === "online";
+    const fee = online ? getVideoConsultFeeInr() : 0;
 
-    await prisma.appointment.create({
+    if (online && !data.payment) {
+      return NextResponse.json(
+        { error: "Consultation fee payment is required for video visits" },
+        { status: 400 },
+      );
+    }
+
+    const status = config.autoConfirm || online ? "confirmed" : "pending";
+    const meetLink = online ? getDemoMeetLink() : null;
+
+    const appointment = await prisma.appointment.create({
       data: {
         name: data.name,
         email: data.email,
@@ -116,12 +136,30 @@ export async function POST(request: Request) {
         service: data.service,
         notes: data.notes || null,
         status,
+        visitType: data.visitType,
+        paymentStatus: online ? "paid" : "not_required",
+        paymentAmount: fee,
+        paymentRef: online ? demoPaymentRef() : null,
+        meetLink,
+        joinToken: online ? crypto.randomUUID().replace(/-/g, "") : null,
       },
     });
 
+    const joinPath =
+      online && appointment.joinToken ? `/consult/${appointment.joinToken}` : null;
+
     return NextResponse.json({
       ok: true,
-      message: config.confirmationNote,
+      message: online
+        ? `Payment of ${formatInr(fee)} received (demo). Your video consult is confirmed — join from the link below when it’s time.`
+        : config.confirmationNote,
+      appointmentId: appointment.id,
+      visitType: data.visitType,
+      paymentStatus: online ? "paid" : "not_required",
+      paymentAmount: fee,
+      joinUrl: joinPath,
+      meetLink,
+      demo: online,
     });
   } catch {
     return NextResponse.json(
@@ -165,5 +203,7 @@ export async function GET(request: Request) {
     timeSlots: config.timeSlots,
     minDate: format(addDays(new Date(), config.minLeadDays), "yyyy-MM-dd"),
     maxDate: format(addDays(new Date(), config.maxAdvanceDays), "yyyy-MM-dd"),
+    videoConsultFee: getVideoConsultFeeInr(),
+    meetConfigured: true,
   });
 }

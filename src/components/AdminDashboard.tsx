@@ -13,6 +13,11 @@ type Appointment = {
   service: string;
   notes: string | null;
   status: string;
+  visitType?: string;
+  paymentStatus?: string;
+  paymentAmount?: number;
+  joinToken?: string | null;
+  meetLink?: string | null;
   createdAt: string;
 };
 
@@ -501,6 +506,7 @@ export function AdminDashboard() {
                 <th className="px-4 py-3">Patient</th>
                 <th className="px-4 py-3">When</th>
                 <th className="px-4 py-3">Service</th>
+                <th className="px-4 py-3">Visit / pay</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -508,7 +514,7 @@ export function AdminDashboard() {
             <tbody>
               {appointments.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-[var(--muted)]">
+                  <td colSpan={6} className="px-4 py-8 text-[var(--muted)]">
                     No appointments yet.
                   </td>
                 </tr>
@@ -531,6 +537,27 @@ export function AdminDashboard() {
                     {a.time}
                   </td>
                   <td className="px-4 py-4">{a.service}</td>
+                  <td className="px-4 py-4 text-sm">
+                    <p className="capitalize">
+                      {(a.visitType || "in_clinic").replace("_", " ")}
+                    </p>
+                    <p className="text-[var(--muted)] capitalize">
+                      {a.paymentStatus || "not_required"}
+                      {a.paymentAmount
+                        ? ` · ₹${a.paymentAmount}`
+                        : ""}
+                    </p>
+                    {a.joinToken && (
+                      <a
+                        className="mt-1 inline-block text-[var(--teal)] underline"
+                        href={`/consult/${a.joinToken}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Meet room
+                      </a>
+                    )}
+                  </td>
                   <td className="px-4 py-4 capitalize">{a.status}</td>
                   <td className="px-4 py-4">
                     <select
