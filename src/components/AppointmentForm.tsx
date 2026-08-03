@@ -5,7 +5,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ServiceOption = { title: string; slug: string };
 type Status = "idle" | "loading" | "success" | "error";
-type Step = "details" | "payment" | "done";
 type VisitType = "in_clinic" | "online";
 
 function formatInr(amount: number) {
@@ -28,7 +27,7 @@ export function AppointmentForm() {
   const [videoFee, setVideoFee] = useState(799);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [step, setStep] = useState<Step>("details");
+  const [done, setDone] = useState(false);
   const [joinUrl, setJoinUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -45,6 +44,8 @@ export function AppointmentForm() {
     expiry: "",
     cvv: "",
   });
+
+  const online = form.visitType === "online";
 
   const prefersVideoService = useMemo(() => {
     const selected = services.find((s) => s.title === form.service);
@@ -120,20 +121,26 @@ export function AppointmentForm() {
     };
   }, [date]);
 
-  function goToPayment(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setMessage("");
-    if (form.visitType === "online") {
-      setStep("payment");
-      setStatus("idle");
-      return;
-    }
-    void submitBooking();
-  }
-
-  async function submitBooking(withPayment = false) {
     setStatus("loading");
     setMessage("");
+
+    if (online) {
+      const digits = payment.cardNumber.replace(/\s+/g, "");
+      if (
+        payment.cardName.trim().length < 2 ||
+        !/^\d{12,19}$/.test(digits) ||
+        !/^(0[1-9]|1[0-2])\/\d{2}$/.test(payment.expiry.trim()) ||
+        !/^\d{3,4}$/.test(payment.cvv.trim())
+      ) {
+        setStatus("error");
+        setMessage(
+          "Enter card details to pay the consultation fee before you get your Meet link.",
+        );
+        return;
+      }
+    }
 
     try {
       const res = await fetch("/api/appointments", {
@@ -142,9 +149,7 @@ export function AppointmentForm() {
         body: JSON.stringify({
           ...form,
           date,
-          ...(withPayment || form.visitType === "online"
-            ? { payment }
-            : {}),
+          ...(online ? { payment } : {}),
         }),
       });
       const data = await res.json();
@@ -156,7 +161,7 @@ export function AppointmentForm() {
       setStatus("success");
       setMessage(data.message);
       setJoinUrl(data.joinUrl ?? null);
-      setStep("done");
+      setDone(true);
       setBooked((prev) => (form.time ? [...prev, form.time] : prev));
       setForm((f) => ({
         ...f,
@@ -173,11 +178,6 @@ export function AppointmentForm() {
     }
   }
 
-  async function onPay(e: FormEvent) {
-    e.preventDefault();
-    await submitBooking(true);
-  }
-
   if (!bookingEnabled) {
     return (
       <p className="rounded-xl border border-[var(--line)] bg-[var(--mist)] p-6 text-[var(--ink-soft)]">
@@ -187,24 +187,24 @@ export function AppointmentForm() {
     );
   }
 
-  if (step === "done") {
+  if (done) {
     return (
       <div className="space-y-5">
         <div className="rounded-xl border border-[var(--teal)]/30 bg-[color-mix(in_oklab,var(--teal)_10%,white)] p-5">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
-            Request received
+            {joinUrl ? "Paid · consult ready" : "Request received"}
           </p>
           <p className="mt-2 text-[var(--ink)]">{message}</p>
           {joinUrl && (
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href={joinUrl} className="btn-primary">
-                Join Google Meet on this site
+                Open my Google Meet page
               </Link>
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => {
-                  setStep("details");
+                  setDone(false);
                   setStatus("idle");
                   setMessage("");
                   setJoinUrl(null);
@@ -219,7 +219,7 @@ export function AppointmentForm() {
               type="button"
               className="btn-ghost mt-5"
               onClick={() => {
-                setStep("details");
+                setDone(false);
                 setStatus("idle");
                 setMessage("");
               }}
@@ -230,8 +230,7 @@ export function AppointmentForm() {
         </div>
         {joinUrl && (
           <p className="text-sm text-[var(--muted)]">
-            Demo mode: Meet link and payment gateway can be configured later.
-            Save your consult page —{" "}
+            Save this link for your appointment time — payment is already done:{" "}
             <Link href={joinUrl} className="text-[var(--teal)] underline">
               {joinUrl}
             </Link>
@@ -241,110 +240,8 @@ export function AppointmentForm() {
     );
   }
 
-  if (step === "payment") {
-    return (
-      <form onSubmit={onPay} className="space-y-5">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--mist)] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-            Video consultation fee
-          </p>
-          <p className="display mt-1 text-3xl text-[var(--navy)]">
-            {formatInr(videoFee)}
-          </p>
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            Demo checkout — no real charge. Use any test card (e.g. 4242 4242
-            4242 4242).
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          <label className="field md:col-span-2">
-            <span>Name on card</span>
-            <input
-              required
-              value={payment.cardName}
-              onChange={(e) =>
-                setPayment({ ...payment, cardName: e.target.value })
-              }
-              placeholder="As printed on card"
-            />
-          </label>
-          <label className="field md:col-span-2">
-            <span>Card number</span>
-            <input
-              required
-              inputMode="numeric"
-              autoComplete="cc-number"
-              value={payment.cardNumber}
-              onChange={(e) =>
-                setPayment({
-                  ...payment,
-                  cardNumber: e.target.value.replace(/[^\d\s]/g, ""),
-                })
-              }
-              placeholder="4242 4242 4242 4242"
-            />
-          </label>
-          <label className="field">
-            <span>Expiry (MM/YY)</span>
-            <input
-              required
-              value={payment.expiry}
-              onChange={(e) =>
-                setPayment({ ...payment, expiry: e.target.value })
-              }
-              placeholder="12/28"
-            />
-          </label>
-          <label className="field">
-            <span>CVV</span>
-            <input
-              required
-              inputMode="numeric"
-              autoComplete="cc-csc"
-              value={payment.cvv}
-              onChange={(e) =>
-                setPayment({
-                  ...payment,
-                  cvv: e.target.value.replace(/\D/g, "").slice(0, 4),
-                })
-              }
-              placeholder="123"
-            />
-          </label>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={status === "loading"}
-          >
-            {status === "loading"
-              ? "Processing…"
-              : `Pay ${formatInr(videoFee)} & confirm`}
-          </button>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => setStep("details")}
-            disabled={status === "loading"}
-          >
-            Back
-          </button>
-        </div>
-
-        {message && (
-          <p className="text-sm text-red-700" role="status">
-            {message}
-          </p>
-        )}
-      </form>
-    );
-  }
-
   return (
-    <form onSubmit={goToPayment} className="space-y-5">
+    <form onSubmit={onSubmit} className="space-y-5">
       <fieldset className="space-y-3">
         <legend className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
           Visit type
@@ -355,12 +252,12 @@ export function AppointmentForm() {
               {
                 value: "in_clinic" as const,
                 title: "In clinic",
-                blurb: "Visit Indiranagar in person",
+                blurb: "Visit Indiranagar in person — no online fee",
               },
               {
                 value: "online" as const,
                 title: "Online video",
-                blurb: `Pay ${formatInr(videoFee)} · join Google Meet here`,
+                blurb: `Must pay ${formatInr(videoFee)} here to get Meet link`,
               },
             ] as const
           ).map((opt) => {
@@ -470,12 +367,86 @@ export function AppointmentForm() {
       <label className="field">
         <span>Notes (optional)</span>
         <textarea
-          rows={4}
+          rows={3}
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
           placeholder="Symptoms, goals, or anything we should know before your visit."
         />
       </label>
+
+      {online && (
+        <div className="space-y-4 rounded-xl border-2 border-[var(--teal)] bg-[color-mix(in_oklab,var(--teal)_8%,white)] p-5">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+              Pay consultation fee (required)
+            </p>
+            <p className="display mt-1 text-3xl text-[var(--navy)]">
+              {formatInr(videoFee)}
+            </p>
+            <p className="mt-2 text-sm text-[var(--ink-soft)]">
+              Card payment is required on this form. You only get the Google Meet
+              join link after payment succeeds. Demo — no real charge (use{" "}
+              <strong>4242 4242 4242 4242</strong>).
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="field md:col-span-2">
+              <span>Name on card</span>
+              <input
+                required={online}
+                value={payment.cardName}
+                onChange={(e) =>
+                  setPayment({ ...payment, cardName: e.target.value })
+                }
+                placeholder="As printed on card"
+              />
+            </label>
+            <label className="field md:col-span-2">
+              <span>Card number</span>
+              <input
+                required={online}
+                inputMode="numeric"
+                autoComplete="cc-number"
+                value={payment.cardNumber}
+                onChange={(e) =>
+                  setPayment({
+                    ...payment,
+                    cardNumber: e.target.value.replace(/[^\d\s]/g, ""),
+                  })
+                }
+                placeholder="4242 4242 4242 4242"
+              />
+            </label>
+            <label className="field">
+              <span>Expiry (MM/YY)</span>
+              <input
+                required={online}
+                value={payment.expiry}
+                onChange={(e) =>
+                  setPayment({ ...payment, expiry: e.target.value })
+                }
+                placeholder="12/28"
+              />
+            </label>
+            <label className="field">
+              <span>CVV</span>
+              <input
+                required={online}
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                value={payment.cvv}
+                onChange={(e) =>
+                  setPayment({
+                    ...payment,
+                    cvv: e.target.value.replace(/\D/g, "").slice(0, 4),
+                  })
+                }
+                placeholder="123"
+              />
+            </label>
+          </div>
+        </div>
+      )}
 
       <button
         type="submit"
@@ -483,9 +454,9 @@ export function AppointmentForm() {
         disabled={status === "loading" || dayBlocked}
       >
         {status === "loading"
-          ? "Sending…"
-          : form.visitType === "online"
-            ? "Continue to payment"
+          ? "Processing…"
+          : online
+            ? `Pay ${formatInr(videoFee)} & get Meet link`
             : "Request appointment"}
       </button>
 
