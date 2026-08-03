@@ -26,3 +26,8 @@ services:
         value: Honnani GI Surgery
       - key: NEXT_PUBLIC_DOCTOR_NAME
         value: Dr. Sharath S. Honnani
+      - key: NEXT_PUBLIC_VIDEO_CONSULT_FEE
+        value: "799"
+      # Replace with your real clinic Meet room when ready
+      - key: NEXT_PUBLIC_GOOGLE_MEET_URL
+        value: https://meet.google.com/abc-defg-hij

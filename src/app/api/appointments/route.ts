@@ -22,6 +22,11 @@ import {
   rateLimitResponse,
   readJsonLimited,
 } from "@/lib/security";
+import {
+  formatInr,
+  getDemoMeetLink,
+  getVideoConsultFeeInr,
+} from "@/lib/telehealth";
 
 function to12h(hhmm: string): string {
   const [hStr, mStr] = hhmm.split(":");
@@ -145,13 +150,26 @@ export async function POST(request: Request) {
 
     const visitType = data.visitType || matched.slug;
     const isVirtual = visitType === "virtual-consultation";
+    const fee = isVirtual ? getVideoConsultFeeInr() : 0;
+
+    if (isVirtual && !data.payment) {
+      return NextResponse.json(
+        { error: "Consultation fee payment is required for virtual visits" },
+        { status: 400 },
+      );
+    }
+
     const status = "confirmed";
     const seed = `${data.email}-${data.date}-${data.time}-${visitType}`;
     const meetCode = meetCodeFromSeed(seed);
-    const meetLink = isVirtual
-      ? `https://meet.google.com/${meetCode}`
+    const meetLink = isVirtual ? getDemoMeetLink(meetCode) : null;
+    const meetCodeShown = isVirtual
+      ? meetLink!.replace("https://meet.google.com/", "").replace(/\/$/, "")
       : null;
     const time12 = to12h(data.time);
+    const paymentRef = isVirtual
+      ? `DEMO-${Date.now().toString(36).toUpperCase()}`
+      : null;
 
     const appointment = await prisma.appointment.create({
       data: {
@@ -163,6 +181,9 @@ export async function POST(request: Request) {
         service: matched.title,
         visitType,
         meetLink,
+        paymentStatus: isVirtual ? "paid" : "not_required",
+        paymentAmount: fee,
+        paymentRef,
         notes: data.notes || null,
         status,
       },
@@ -175,7 +196,7 @@ export async function POST(request: Request) {
         date: data.date,
         time12,
         meetLink,
-        meetCode,
+        meetCode: meetCodeShown || meetCode,
         doctorName: config.doctor,
       });
       const result = await sendMail({
@@ -189,7 +210,7 @@ export async function POST(request: Request) {
         await sendMail({
           to: config.notifyEmail,
           subject: `New virtual booking — ${data.date} ${time12}`,
-          text: `${data.name} booked a virtual visit on ${data.date} at ${time12}.\nMeet: ${meetLink}\nPhone: ${data.phone}\nEmail: ${data.email}`,
+          text: `${data.name} booked a virtual visit on ${data.date} at ${time12}.\nPaid: ${formatInr(fee)} (${paymentRef})\nMeet: ${meetLink}\nPhone: ${data.phone}\nEmail: ${data.email}`,
         });
       }
     } else {
@@ -217,7 +238,7 @@ export async function POST(request: Request) {
     }
 
     const message = isVirtual
-      ? `Confirmed for ${data.date} at ${time12}. Save your Google Meet details below${emailSent ? " — a copy was also emailed to you" : " (and screenshot this page)"}.`
+      ? `Payment of ${formatInr(fee)} received (demo). Confirmed for ${data.date} at ${time12}. Save your Google Meet details below${emailSent ? " — a copy was also emailed to you" : " (and screenshot this page)"}.`
       : `Confirmed for ${data.date} at ${time12} (clinic visit).${emailSent ? " Confirmation emailed to you." : ""} ${config.confirmationNote}`;
 
     return NextResponse.json({
@@ -225,10 +246,14 @@ export async function POST(request: Request) {
       message,
       status: appointment.status,
       meetLink: appointment.meetLink,
-      meetCode: isVirtual ? meetCode : null,
+      meetCode: isVirtual ? meetCodeShown || meetCode : null,
       emailSent,
       appointmentId: appointment.id,
       timeLabel: time12,
+      paymentStatus: isVirtual ? "paid" : "not_required",
+      paymentAmount: fee,
+      paymentRef,
+      demo: isVirtual,
     });
   } catch {
     return NextResponse.json(
@@ -273,5 +298,6 @@ export async function GET(request: Request) {
     timeSlots: daySlots,
     minDate: format(addDays(new Date(), config.minLeadDays), "yyyy-MM-dd"),
     maxDate: format(addDays(new Date(), config.maxAdvanceDays), "yyyy-MM-dd"),
+    videoConsultFee: getVideoConsultFeeInr(),
   });
 }

@@ -6,6 +6,7 @@ import {
   getClinicConfig,
 } from "@/lib/settings";
 import { getClientIp, rateLimit, rateLimitResponse } from "@/lib/security";
+import { getVideoConsultFeeInr } from "@/lib/telehealth";
 
 /** Public-safe clinic payload — strips internal notification settings. */
 function toPublicClinic(settings: Awaited<ReturnType<typeof getClinicConfig>>) {
@@ -27,6 +28,7 @@ function toPublicClinic(settings: Awaited<ReturnType<typeof getClinicConfig>>) {
     maxAdvanceDays: settings.maxAdvanceDays,
     confirmationNote: settings.confirmationNote,
     emergencyNote: settings.emergencyNote,
+    videoConsultFee: getVideoConsultFeeInr(),
   };
 }
 
