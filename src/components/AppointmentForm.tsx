@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ServiceOption = { title: string; slug: string };
@@ -15,28 +16,21 @@ function to12h(hhmm: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-function formatInr(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 const VISIT_TYPES = [
   {
     slug: "clinic-consultation",
     title: "Clinic Consultation",
-    blurb: "In-person visit at the hospital clinic — no online fee.",
+    blurb: "In-person visit at the hospital clinic.",
   },
   {
     slug: "virtual-consultation",
     title: "Virtual Consultation",
-    blurb: "Pay on this form, then get your Google Meet link.",
+    blurb: "Secure video visit with Google Meet after confirmation.",
   },
 ] as const;
 
 export function AppointmentForm() {
+  const router = useRouter();
   const [minDate, setMinDate] = useState("");
   const [maxDate, setMaxDate] = useState("");
   const [date, setDate] = useState("");
@@ -45,13 +39,8 @@ export function AppointmentForm() {
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [bookingEnabled, setBookingEnabled] = useState(true);
   const [dayBlocked, setDayBlocked] = useState(false);
-  const [videoFee, setVideoFee] = useState(799);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [meetLink, setMeetLink] = useState("");
-  const [meetCode, setMeetCode] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [visitSlug, setVisitSlug] = useState<string>("clinic-consultation");
   const [form, setForm] = useState({
     name: "",
@@ -59,12 +48,6 @@ export function AppointmentForm() {
     phone: "",
     time: "",
     notes: "",
-  });
-  const [payment, setPayment] = useState({
-    cardName: "",
-    cardNumber: "",
-    expiry: "",
-    cvv: "",
   });
 
   const selectedService = useMemo(() => {
@@ -91,9 +74,6 @@ export function AppointmentForm() {
       );
       setServices(list);
       setBookingEnabled(data.clinic?.bookingEnabled ?? true);
-      if (typeof data.clinic?.videoConsultFee === "number") {
-        setVideoFee(data.clinic.videoConsultFee);
-      }
       const lead = data.clinic?.minLeadDays ?? 0;
       const maxAdv = data.clinic?.maxAdvanceDays ?? 60;
       const minD = new Date();
@@ -133,9 +113,6 @@ export function AppointmentForm() {
         if (typeof data.bookingEnabled === "boolean") {
           setBookingEnabled(data.bookingEnabled);
         }
-        if (typeof data.videoConsultFee === "number") {
-          setVideoFee(data.videoConsultFee);
-        }
       } catch {
         if (!cancelled) {
           setBooked([]);
@@ -153,26 +130,6 @@ export function AppointmentForm() {
     e.preventDefault();
     setStatus("loading");
     setMessage("");
-    setMeetLink("");
-    setMeetCode("");
-    setEmailSent(false);
-    setCopied(false);
-
-    if (isVirtual) {
-      const digits = payment.cardNumber.replace(/\s+/g, "");
-      if (
-        payment.cardName.trim().length < 2 ||
-        !/^\d{12,19}$/.test(digits) ||
-        !/^(0[1-9]|1[0-2])\/\d{2}$/.test(payment.expiry.trim()) ||
-        !/^\d{3,4}$/.test(payment.cvv.trim())
-      ) {
-        setStatus("error");
-        setMessage(
-          "Enter card details to pay the consultation fee before you get the Meet link.",
-        );
-        return;
-      }
-    }
 
     try {
       const res = await fetch("/api/appointments", {
@@ -183,7 +140,6 @@ export function AppointmentForm() {
           date,
           service: selectedService.title,
           visitType: selectedService.slug,
-          ...(isVirtual ? { payment } : {}),
         }),
       });
       const data = await res.json();
@@ -192,12 +148,16 @@ export function AppointmentForm() {
         setMessage(data.error || "Something went wrong");
         return;
       }
+
+      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
+
+      if (data.payUrl) {
+        router.push(data.payUrl);
+        return;
+      }
+
       setStatus("success");
       setMessage(data.message);
-      if (data.meetLink) setMeetLink(data.meetLink);
-      if (data.meetCode) setMeetCode(data.meetCode);
-      setEmailSent(Boolean(data.emailSent));
-      setBooked((prev) => (form.time ? [...prev, form.time] : prev));
       setForm({
         name: "",
         email: "",
@@ -205,21 +165,9 @@ export function AppointmentForm() {
         time: "",
         notes: "",
       });
-      setPayment({ cardName: "", cardNumber: "", expiry: "", cvv: "" });
     } catch {
       setStatus("error");
       setMessage("Network error. Please try again.");
-    }
-  }
-
-  async function copyMeet() {
-    if (!meetLink) return;
-    try {
-      await navigator.clipboard.writeText(meetLink);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
     }
   }
 
@@ -253,9 +201,7 @@ export function AppointmentForm() {
               >
                 <p className="font-medium text-[var(--deep)]">{visit.title}</p>
                 <p className="mt-1 text-sm text-[var(--ink-soft)]">
-                  {visit.slug === "virtual-consultation"
-                    ? `Pay ${formatInr(videoFee)} here, then get Meet link.`
-                    : visit.blurb}
+                  {visit.blurb}
                 </p>
               </button>
             );
@@ -340,7 +286,7 @@ export function AppointmentForm() {
       <label className="field">
         <span>Notes (optional)</span>
         <textarea
-          rows={3}
+          rows={4}
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
           placeholder="Symptoms, reports, or anything we should know."
@@ -348,77 +294,11 @@ export function AppointmentForm() {
       </label>
 
       {isVirtual && (
-        <div className="space-y-4 rounded-2xl border-2 border-[var(--teal)] bg-[color-mix(in_oklab,var(--teal)_8%,white)] p-5">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
-              Pay consultation fee (required)
-            </p>
-            <p className="display mt-1 text-3xl text-[var(--deep)]">
-              {formatInr(videoFee)}
-            </p>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">
-              Card payment is required before the Google Meet link appears. Demo
-              checkout — no real charge (use{" "}
-              <strong>4242 4242 4242 4242</strong>).
-            </p>
-          </div>
-          <label className="field">
-            <span>Name on card</span>
-            <input
-              required={isVirtual}
-              value={payment.cardName}
-              onChange={(e) =>
-                setPayment({ ...payment, cardName: e.target.value })
-              }
-              placeholder="As printed on card"
-            />
-          </label>
-          <label className="field">
-            <span>Card number</span>
-            <input
-              required={isVirtual}
-              inputMode="numeric"
-              autoComplete="cc-number"
-              value={payment.cardNumber}
-              onChange={(e) =>
-                setPayment({
-                  ...payment,
-                  cardNumber: e.target.value.replace(/[^\d\s]/g, ""),
-                })
-              }
-              placeholder="4242 4242 4242 4242"
-            />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="field">
-              <span>Expiry (MM/YY)</span>
-              <input
-                required={isVirtual}
-                value={payment.expiry}
-                onChange={(e) =>
-                  setPayment({ ...payment, expiry: e.target.value })
-                }
-                placeholder="12/28"
-              />
-            </label>
-            <label className="field">
-              <span>CVV</span>
-              <input
-                required={isVirtual}
-                inputMode="numeric"
-                autoComplete="cc-csc"
-                value={payment.cvv}
-                onChange={(e) =>
-                  setPayment({
-                    ...payment,
-                    cvv: e.target.value.replace(/\D/g, "").slice(0, 4),
-                  })
-                }
-                placeholder="123"
-              />
-            </label>
-          </div>
-        </div>
+        <p className="rounded-xl bg-[var(--sand)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+          After you reserve a slot, you will continue to a secure checkout to
+          complete the consultation fee. Your Google Meet link and receipt are
+          emailed once payment succeeds.
+        </p>
       )}
 
       <button
@@ -427,9 +307,9 @@ export function AppointmentForm() {
         disabled={status === "loading" || dayBlocked || !form.time}
       >
         {status === "loading"
-          ? "Processing..."
+          ? "Please wait..."
           : isVirtual
-            ? `Pay ${formatInr(videoFee)} & get Meet link`
+            ? "Continue to payment"
             : "Confirm booking"}
       </button>
 
@@ -442,46 +322,6 @@ export function AppointmentForm() {
           }`}
         >
           <p>{message}</p>
-        </div>
-      )}
-
-      {status === "success" && meetLink && (
-        <div className="rounded-2xl border border-[var(--teal)] bg-white p-5 shadow-[0_12px_40px_rgba(6,51,44,0.08)]">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
-            Paid · Google Meet details
-          </p>
-          <p className="display mt-2 text-2xl text-[var(--deep)]">
-            Save this — screenshot or copy
-          </p>
-          <div className="mt-4 rounded-xl bg-[var(--sand)] px-4 py-3">
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-              Meeting code
-            </p>
-            <p className="mt-1 font-mono text-xl font-semibold text-[var(--deep)]">
-              {meetCode || meetLink.replace("https://meet.google.com/", "")}
-            </p>
-          </div>
-          <div className="mt-3 break-all rounded-xl border border-[var(--line)] px-4 py-3 text-sm text-[var(--ink)]">
-            {meetLink}
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" className="btn-primary" onClick={copyMeet}>
-              {copied ? "Copied!" : "Copy Meet link"}
-            </button>
-            <a
-              href={meetLink}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost"
-            >
-              Open Meet
-            </a>
-          </div>
-          <p className="mt-4 text-sm text-[var(--ink-soft)]">
-            {emailSent
-              ? "Confirmation email sent with this Meet link."
-              : "Keep a screenshot of this card. Email delivery activates once SMTP is connected on the server."}
-          </p>
         </div>
       )}
     </form>

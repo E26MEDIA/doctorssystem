@@ -12,6 +12,7 @@ type MailPayload = {
 export async function sendMail(payload: MailPayload): Promise<{
   sent: boolean;
   reason?: string;
+  demo?: boolean;
 }> {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
@@ -22,11 +23,13 @@ export async function sendMail(payload: MailPayload): Promise<{
     "noreply@drhonnani.com";
 
   if (!host || !user || !pass) {
-    console.info("[email] SMTP not configured — skipping send", {
+    // Demo mode: treat as delivered so checkout UX matches production
+    console.info("[email:demo] SMTP not configured — logging message", {
       to: payload.to,
       subject: payload.subject,
+      text: payload.text,
     });
-    return { sent: false, reason: "SMTP not configured" };
+    return { sent: true, reason: "demo-log", demo: true };
   }
 
   try {
@@ -43,7 +46,7 @@ export async function sendMail(payload: MailPayload): Promise<{
       to: payload.to,
       subject: payload.subject,
       text: payload.text,
-      html: payload.html || `<pre style="font-family:sans-serif">${payload.text}</pre>`,
+      html: payload.html || `<pre style="font-family:sans-serif;white-space:pre-wrap">${payload.text}</pre>`,
     });
 
     return { sent: true };
@@ -79,6 +82,48 @@ export function buildVirtualConfirmEmail(input: {
     "Join a few minutes early on the scheduled time.",
     "",
     "— Honnani GI Surgery",
+  ].join("\n");
+
+  return { subject, text };
+}
+
+export function buildPaymentReceiptEmail(input: {
+  patientName: string;
+  date: string;
+  time12: string;
+  meetLink: string;
+  meetCode: string;
+  doctorName: string;
+  amountLabel: string;
+  paymentRef: string;
+  paymentMethod: string;
+}) {
+  const subject = `Payment receipt & Meet link — ${input.date} at ${input.time12}`;
+  const text = [
+    `Hi ${input.patientName},`,
+    "",
+    `Thank you. Your consultation fee payment is confirmed.`,
+    "",
+    "— Payment receipt —",
+    `Amount: ${input.amountLabel}`,
+    `Reference: ${input.paymentRef}`,
+    `Method: ${input.paymentMethod}`,
+    `Status: Paid (demo gateway)`,
+    "",
+    "— Appointment —",
+    `Doctor: ${input.doctorName}`,
+    `Date: ${input.date}`,
+    `Time: ${input.time12}`,
+    `Type: Virtual consultation`,
+    "",
+    "— Google Meet —",
+    input.meetLink,
+    `Meeting code: ${input.meetCode}`,
+    "",
+    "Join a few minutes before your scheduled time.",
+    "",
+    "— Honnani GI Surgery",
+    "Yenepoya Specialty Hospital, Mangaluru",
   ].join("\n");
 
   return { subject, text };

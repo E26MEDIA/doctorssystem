@@ -220,7 +220,7 @@ export default async function HomePage() {
                     slug: "virtual-consultation",
                     title: "Virtual Consultation",
                     summary:
-                      "Video visit from home — pay on booking, then get your Google Meet link.",
+                      "Video visit from home. Complete checkout to receive your Google Meet link.",
                     duration: "20–30 min",
                   },
                 ]
@@ -257,8 +257,8 @@ export default async function HomePage() {
               Clinic or virtual — pick an open slot
             </h2>
             <p className="mt-4 text-lg text-[var(--ink-soft)]">
-              Available slots confirm immediately. Virtual visits require fee
-              payment here, then you get the Google Meet link.
+              Choose clinic or virtual, pick an open slot, then confirm. Virtual
+              visits continue to a secure checkout for the consultation fee.
             </p>
             <div className="mt-8 space-y-2 text-sm text-[var(--ink-soft)]">
               <p>

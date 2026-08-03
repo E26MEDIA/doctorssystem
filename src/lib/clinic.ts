@@ -75,7 +75,7 @@ export const services = [
     slug: "virtual-consultation",
     title: "Virtual Consultation",
     summary:
-      "Secure video visit from home. Pay the consultation fee on booking, then get your Google Meet link.",
+      "Secure video visit from home. After booking you complete a secure checkout, then receive your Google Meet link and receipt by email.",
     duration: "20–30 min",
     details:
       "Best for report review, second opinions, post-op check-ins, and questions that do not need a physical exam. Join from your phone or laptop at the booked time.",
@@ -192,7 +192,7 @@ export const articles = [
     publishedAt: "2026-03-18",
     readTime: "4 min",
     body: [
-      "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. Pay on the booking form, then you receive a Google Meet link for the confirmed slot.",
+      "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. After you reserve a slot, complete checkout to receive your Google Meet link and payment receipt by email.",
       "Choose a clinic consultation for new abdominal findings, hernia assessment, pre-operative planning that needs examination, or when dressing changes and in-person counselling matter.",
       "Either way, pick only an open slot from the doctor’s weekly schedule. Available slots confirm instantly — no waiting for a second approval step.",
     ],
