@@ -7,6 +7,7 @@ import type {
   HourRow,
   ServiceItem,
 } from "@/lib/settings";
+import { buildDateScheduleWindow } from "@/lib/schedule";
 
 type Appointment = {
   id: string;
@@ -34,12 +35,6 @@ type Message = {
   createdAt: string;
 };
 
-type BlockedDate = {
-  id: string;
-  date: string;
-  reason: string | null;
-};
-
 type Tab =
   | "overview"
   | "appointments"
@@ -48,7 +43,6 @@ type Tab =
   | "hours"
   | "services"
   | "booking"
-  | "blocked"
   | "notifications"
   | "security";
 
@@ -106,6 +100,10 @@ function DateScheduleEditor({
   schedule: DateScheduleRow[];
   onChange: (updated: DateScheduleRow[]) => void;
 }) {
+  const [openDate, setOpenDate] = useState<string | null>(
+    () => schedule.find((r) => r.enabled)?.date ?? schedule[0]?.date ?? null,
+  );
+
   function updateDay(date: string, patch: Partial<DateScheduleRow>) {
     onChange(
       schedule.map((row) => (row.date === date ? { ...row, ...patch } : row)),
@@ -116,79 +114,107 @@ function DateScheduleEditor({
     const next = currentSlots.includes(slot)
       ? currentSlots.filter((s) => s !== slot)
       : [...currentSlots, slot].sort();
-    updateDay(date, { slots: next });
+    updateDay(date, { slots: next, enabled: true });
   }
+
+  const openCount = schedule.filter((r) => r.enabled && r.slots.length > 0).length;
+  const offCount = schedule.filter((r) => !r.enabled).length;
 
   return (
     <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
       <h3 className="text-lg font-semibold text-[var(--deep)]">
-        Upcoming consultation schedule
+        Daily consultation schedule
       </h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Real calendar dates for the next 2 weeks. Tap time cards to open or close
-        slots. Once a patient books (clinic or virtual), that time locks for everyone.
+        Set times for each calendar date. Turn a day <strong>Off</strong> when the
+        doctor is unavailable — that date cannot be booked. Open days only show the
+        times you tap below.
+      </p>
+      <p className="mt-2 text-xs text-[var(--muted)]">
+        {openCount} open day{openCount === 1 ? "" : "s"} with times · {offCount}{" "}
+        closed
       </p>
 
-      <div className="mt-5 space-y-4">
-        {schedule.map((row) => (
-          <div
-            key={row.date}
-            className={`rounded-xl border bg-white p-4 transition-opacity ${
-              row.enabled
-                ? "border-[var(--line)]"
-                : "border-[var(--line)] opacity-60"
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold text-[var(--deep)]">{row.label}</p>
-                <p className="text-xs text-[var(--muted)]">{row.date}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  {row.enabled
-                    ? row.slots.length
-                      ? row.slots.map(to12h).join(" · ")
-                      : "No slots selected"
-                    : "Doctor unavailable"}
-                </p>
+      <div className="mt-5 space-y-3">
+        {schedule.map((row) => {
+          const expanded = openDate === row.date;
+          return (
+            <div
+              key={row.date}
+              className={`rounded-xl border bg-white transition ${
+                row.enabled
+                  ? "border-[var(--line)]"
+                  : "border-[var(--line)] bg-[var(--sand)]/40"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() =>
+                    setOpenDate((d) => (d === row.date ? null : row.date))
+                  }
+                >
+                  <p className="font-semibold text-[var(--deep)]">{row.label}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {!row.enabled
+                      ? "Closed — patients cannot book"
+                      : row.slots.length
+                        ? row.slots.map(to12h).join(" · ")
+                        : "Open — tap to choose times"}
+                  </p>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !row.enabled;
+                      updateDay(row.date, {
+                        enabled: next,
+                        slots: next ? row.slots : [],
+                      });
+                      if (next) setOpenDate(row.date);
+                    }}
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                      row.enabled
+                        ? "bg-[var(--teal)] text-white"
+                        : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
+                    }`}
+                  >
+                    {row.enabled ? "Open" : "Off"}
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  updateDay(row.date, { enabled: !row.enabled })
-                }
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                  row.enabled
-                    ? "bg-[var(--teal)] text-white"
-                    : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
-                }`}
-              >
-                {row.enabled ? "Available" : "Off"}
-              </button>
-            </div>
 
-            {row.enabled && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {ALL_SLOTS.map((slot) => {
-                  const active = row.slots.includes(slot);
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => toggleSlot(row.date, slot, row.slots)}
-                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-                        active
-                          ? "border-[var(--teal)] bg-[var(--teal)] text-white shadow-sm"
-                          : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)] hover:text-[var(--teal)]"
-                      }`}
-                    >
-                      {to12h(slot)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
+              {expanded && row.enabled && (
+                <div className="border-t border-[var(--line)] px-4 pb-4 pt-3">
+                  <p className="mb-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+                    Available times for this date
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_SLOTS.map((slot) => {
+                      const active = row.slots.includes(slot);
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => toggleSlot(row.date, slot, row.slots)}
+                          className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                            active
+                              ? "border-[var(--teal)] bg-[var(--teal)] text-white shadow-sm"
+                              : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)] hover:text-[var(--teal)]"
+                          }`}
+                        >
+                          {to12h(slot)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -269,7 +295,6 @@ export function AdminDashboard() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<ClinicConfig>(emptySettings);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -284,9 +309,6 @@ export function AdminDashboard() {
     sortOrder: 0,
   });
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-
-  const [blockDate, setBlockDate] = useState("");
-  const [blockReason, setBlockReason] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -305,7 +327,6 @@ export function AdminDashboard() {
     setMessages(data.messages ?? []);
     setSettings(data.settings ?? emptySettings());
     setServices(data.services ?? []);
-    setBlockedDates(data.blockedDates ?? []);
     setAuthed(true);
     setChecking(false);
   }, []);
@@ -325,6 +346,11 @@ export function AdminDashboard() {
   const confirmed = useMemo(
     () => appointments.filter((a) => a.status === "confirmed").length,
     [appointments],
+  );
+
+  const closedDays = useMemo(
+    () => settings.dateSchedule.filter((d) => !d.enabled).length,
+    [settings.dateSchedule],
   );
 
   async function onLogin(e: FormEvent) {
@@ -434,27 +460,14 @@ export function AdminDashboard() {
     await load();
   }
 
-  async function addBlockedDate(e: FormEvent) {
-    e.preventDefault();
-    const res = await fetch("/api/admin/blocked-dates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: blockDate, reason: blockReason }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setSaveMsg(data.error || "Could not block date");
-      return;
-    }
-    setBlockDate("");
-    setBlockReason("");
-    setSaveMsg("Date blocked");
-    await load();
-  }
-
-  async function removeBlockedDate(id: string) {
-    await fetch(`/api/admin/blocked-dates?id=${id}`, { method: "DELETE" });
-    await load();
+  function rebuildScheduleWindow(
+    next: Pick<ClinicConfig, "minLeadDays" | "maxAdvanceDays" | "dateSchedule">,
+  ) {
+    return buildDateScheduleWindow(
+      next.maxAdvanceDays,
+      next.minLeadDays,
+      next.dateSchedule,
+    );
   }
 
   async function changePassword(e: FormEvent) {
@@ -559,10 +572,7 @@ export function AdminDashboard() {
           Services
         </TabButton>
         <TabButton active={tab === "booking"} onClick={() => setTab("booking")}>
-          Booking
-        </TabButton>
-        <TabButton active={tab === "blocked"} onClick={() => setTab("blocked")}>
-          Blocked dates
+          Schedule
         </TabButton>
         <TabButton
           active={tab === "notifications"}
@@ -581,7 +591,7 @@ export function AdminDashboard() {
             { label: "Pending", value: pending },
             { label: "Confirmed", value: confirmed },
             { label: "Unread messages", value: unread },
-            { label: "Blocked days", value: blockedDates.length },
+            { label: "Closed days", value: closedDays },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -865,7 +875,8 @@ export function AdminDashboard() {
         <div className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8">
           <h2 className="display text-3xl">Clinic hours</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Shown on the contact page and footer.
+            Display text for the website footer and contact page only. Patient
+            booking times are set under Schedule, date by date.
           </p>
           <div className="mt-6 space-y-4">
             {settings.hours.map((h, i) => (
@@ -1095,10 +1106,11 @@ export function AdminDashboard() {
 
       {tab === "booking" && (
         <div className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8">
-          <h2 className="display text-3xl">Booking settings</h2>
+          <h2 className="display text-3xl">Schedule</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Set exactly when the doctor is available each day. Once a patient books
-            a time, that slot is automatically locked for everyone else.
+            Manage availability by calendar date in one place. Open a day and tap
+            the times the doctor will see patients. Mark a day Off when they are
+            away — patients will not see that date as bookable.
           </p>
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             <label className="flex items-center gap-3 text-sm md:col-span-2">
@@ -1131,27 +1143,42 @@ export function AdminDashboard() {
                 min={0}
                 max={30}
                 value={settings.minLeadDays}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    minLeadDays: Number(e.target.value) || 0,
-                  })
-                }
+                onChange={(e) => {
+                  const minLeadDays = Number(e.target.value) || 0;
+                  setSettings((s) => ({
+                    ...s,
+                    minLeadDays,
+                    dateSchedule: rebuildScheduleWindow({
+                      minLeadDays,
+                      maxAdvanceDays: s.maxAdvanceDays,
+                      dateSchedule: s.dateSchedule,
+                    }),
+                  }));
+                }}
               />
             </label>
             <label className="field">
-              <span>Book up to (days ahead)</span>
+              <span>Show schedule for (days ahead)</span>
               <input
                 type="number"
                 min={1}
-                max={365}
+                max={90}
                 value={settings.maxAdvanceDays}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    maxAdvanceDays: Number(e.target.value) || 1,
-                  })
-                }
+                onChange={(e) => {
+                  const maxAdvanceDays = Math.min(
+                    90,
+                    Math.max(1, Number(e.target.value) || 1),
+                  );
+                  setSettings((s) => ({
+                    ...s,
+                    maxAdvanceDays,
+                    dateSchedule: rebuildScheduleWindow({
+                      minLeadDays: s.minLeadDays,
+                      maxAdvanceDays,
+                      dateSchedule: s.dateSchedule,
+                    }),
+                  }));
+                }}
               />
             </label>
             <label className="field md:col-span-2">
@@ -1190,71 +1217,6 @@ export function AdminDashboard() {
             message={saveMsg}
             onSave={() => saveSettings()}
           />
-        </div>
-      )}
-
-      {tab === "blocked" && (
-        <div className="mt-8 space-y-6">
-          <form
-            onSubmit={addBlockedDate}
-            className="rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8"
-          >
-            <h2 className="display text-3xl">Blocked dates</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Holidays, leave, or clinic closures — patients cannot book these
-              days.
-            </p>
-            <div className="mt-6 grid gap-5 md:grid-cols-[1fr_1fr_auto]">
-              <label className="field">
-                <span>Date</span>
-                <input
-                  required
-                  type="date"
-                  value={blockDate}
-                  onChange={(e) => setBlockDate(e.target.value)}
-                />
-              </label>
-              <label className="field">
-                <span>Reason (optional)</span>
-                <input
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="Holiday / conference"
-                />
-              </label>
-              <button type="submit" className="btn-primary self-end">
-                Block date
-              </button>
-            </div>
-            {saveMsg && (
-              <p className="mt-3 text-sm text-[var(--teal)]">{saveMsg}</p>
-            )}
-          </form>
-          <div className="space-y-3">
-            {blockedDates.length === 0 && (
-              <p className="text-[var(--muted)]">No blocked dates.</p>
-            )}
-            {blockedDates.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white px-5 py-4"
-              >
-                <div>
-                  <p className="font-medium">{b.date}</p>
-                  {b.reason && (
-                    <p className="text-sm text-[var(--muted)]">{b.reason}</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="btn-ghost !py-2"
-                  onClick={() => removeBlockedDate(b.id)}
-                >
-                  Unblock
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

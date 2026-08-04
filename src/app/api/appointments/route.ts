@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 import {
   ensureAllSettings,
   getActiveServices,
-  getBlockedDates,
   getClinicConfig,
   getSlotsForDate,
+  isClinicClosedOn,
 } from "@/lib/settings";
 import {
   buildClinicConfirmEmail,
@@ -45,10 +45,9 @@ export async function POST(request: Request) {
     if (!limited.ok) return rateLimitResponse(limited.retryAfterSec);
 
     await ensureAllSettings();
-    const [config, services, blocked] = await Promise.all([
+    const [config, services] = await Promise.all([
       getClinicConfig(),
       getActiveServices(),
-      getBlockedDates(),
     ]);
 
     if (!config.bookingEnabled) {
@@ -86,7 +85,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (blocked.some((b) => b.date === data.date)) {
+    if (isClinicClosedOn(config, data.date)) {
       return NextResponse.json(
         { error: "The clinic is closed on that date" },
         { status: 400 },
@@ -233,7 +232,7 @@ export async function GET(request: Request) {
   }
 
   await ensureAllSettings();
-  const [booked, blocked, config] = await Promise.all([
+  const [booked, config] = await Promise.all([
     prisma.appointment.findMany({
       where: {
         date,
@@ -241,11 +240,10 @@ export async function GET(request: Request) {
       },
       select: { time: true, visitType: true },
     }),
-    getBlockedDates(),
     getClinicConfig(),
   ]);
 
-  const isBlocked = blocked.some((b) => b.date === date);
+  const isBlocked = isClinicClosedOn(config, date);
   const daySlots = getSlotsForDate(config, date);
 
   return NextResponse.json({

@@ -284,7 +284,7 @@ export function AppointmentForm() {
         </p>
         {dayBlocked ? (
           <p className="mt-3 text-sm text-[var(--ink-soft)]">
-            Clinic closed this day
+            Clinic closed this day — please pick another date
           </p>
         ) : !date ? (
           <p className="mt-3 text-sm text-[var(--ink-soft)]">

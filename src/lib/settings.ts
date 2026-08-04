@@ -1,4 +1,3 @@
-import { addDays, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   articles,
@@ -7,6 +6,13 @@ import {
   testimonials,
   timeSlots as defaultTimeSlots,
 } from "@/lib/clinic";
+import {
+  buildDateScheduleWindow,
+  formatScheduleLabel,
+  getSlotsForDateRow,
+  isDateClosedInSchedule,
+  type DateScheduleRow,
+} from "@/lib/schedule";
 
 export type HourRow = { day: string; time: string };
 export type WeeklyScheduleRow = {
@@ -15,11 +21,11 @@ export type WeeklyScheduleRow = {
   enabled: boolean;
   slots: string[];
 };
-export type DateScheduleRow = {
-  date: string;
-  label: string;
-  enabled: boolean;
-  slots: string[];
+export type { DateScheduleRow };
+export {
+  buildDateScheduleWindow,
+  formatScheduleLabel,
+  isDateClosedInSchedule,
 };
 
 export type ClinicConfig = {
@@ -81,43 +87,6 @@ const defaultWeeklySchedule: WeeklyScheduleRow[] = weekdayOptions.map(
   }),
 );
 
-export function formatScheduleLabel(dateStr: string) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  return format(d, "EEE, d MMM yyyy");
-}
-
-/** Build the next N bookable calendar days for the admin schedule editor. */
-export function buildDateScheduleWindow(
-  days = 14,
-  leadDays = 1,
-  saved: DateScheduleRow[] = [],
-  options?: { fillDefaults?: boolean },
-): DateScheduleRow[] {
-  const fillDefaults = options?.fillDefaults ?? false;
-  const savedMap = new Map(saved.map((row) => [row.date, row]));
-  const start = addDays(new Date(), leadDays);
-  start.setHours(0, 0, 0, 0);
-
-  return Array.from({ length: days }, (_, i) => {
-    const date = format(addDays(start, i), "yyyy-MM-dd");
-    const existing = savedMap.get(date);
-    const weekday = addDays(start, i).getDay(); // 0 Sun
-    const slots =
-      existing !== undefined
-        ? (existing.slots ?? []).filter((slot) => /^\d{2}:\d{2}$/.test(slot))
-        : fillDefaults
-          ? [...defaultTimeSlots]
-          : [];
-    return {
-      date,
-      label: formatScheduleLabel(date),
-      enabled: existing?.enabled ?? weekday !== 0,
-      slots,
-    };
-  });
-}
-
 export function defaultsConfig(): ClinicConfig {
   return {
     name: defaultClinic.name,
@@ -140,7 +109,7 @@ export function defaultsConfig(): ClinicConfig {
       ...row,
       slots: [...row.slots],
     })),
-    dateSchedule: buildDateScheduleWindow(14, 1, [], { fillDefaults: true }),
+    dateSchedule: buildDateScheduleWindow(60, 1, [], { fillDefaults: true }),
     bookingEnabled: true,
     minLeadDays: 1,
     maxAdvanceDays: 60,
@@ -280,7 +249,7 @@ export function rowToConfig(
     timeSlots: parseJson<string[]>(row.timeSlotsJson, [...defaultTimeSlots]),
     weeklySchedule,
     dateSchedule: buildDateScheduleWindow(
-      14,
+      row.maxAdvanceDays,
       row.minLeadDays,
       savedDates,
     ),
@@ -296,28 +265,13 @@ export function rowToConfig(
   };
 }
 
+/** Bookable times for one calendar date — date schedule only, no weekday template. */
 export function getSlotsForDate(config: ClinicConfig, date: string): string[] {
-  const exact = config.dateSchedule.find((row) => row.date === date);
-  if (exact) {
-    if (!exact.enabled) return [];
-    return exact.slots;
-  }
+  return getSlotsForDateRow(config.dateSchedule, date);
+}
 
-  // Fallback for dates outside the 14-day admin window: weekly template
-  const target = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(target.getTime())) return [];
-  const dayKey = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ][target.getDay()];
-  const weekly = config.weeklySchedule.find((item) => item.dayKey === dayKey);
-  if (!weekly || !weekly.enabled) return [];
-  return weekly.slots;
+export function isClinicClosedOn(config: ClinicConfig, date: string): boolean {
+  return isDateClosedInSchedule(config.dateSchedule, date);
 }
 
 export async function getClinicConfig(): Promise<ClinicConfig> {

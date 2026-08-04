@@ -33,10 +33,17 @@ export async function GET() {
       getBlockedDates(),
     ]);
 
+  const settings = rowToConfig(settingsRow);
+  const blockedSet = new Set(blockedDates.map((b) => b.date));
+  // Legacy BlockedDate rows appear as Off in the unified schedule editor
+  settings.dateSchedule = settings.dateSchedule.map((row) =>
+    blockedSet.has(row.date) ? { ...row, enabled: false } : row,
+  );
+
   return NextResponse.json({
     appointments,
     messages,
-    settings: rowToConfig(settingsRow),
+    settings,
     services,
     blockedDates,
   });
@@ -175,6 +182,27 @@ export async function PUT(request: Request) {
         emergencyNote: s.emergencyNote,
       },
     });
+
+    // Keep BlockedDate table in sync with Off days in the schedule (one source of truth in UI)
+    const offDates = s.dateSchedule
+      .filter((row) => !row.enabled)
+      .map((row) => row.date);
+    const openDates = s.dateSchedule
+      .filter((row) => row.enabled)
+      .map((row) => row.date);
+
+    if (openDates.length) {
+      await prisma.blockedDate.deleteMany({
+        where: { date: { in: openDates } },
+      });
+    }
+    for (const date of offDates) {
+      await prisma.blockedDate.upsert({
+        where: { date },
+        update: {},
+        create: { date, reason: "Marked Off in schedule" },
+      });
+    }
 
     return NextResponse.json({ ok: true, settings: rowToConfig(row) });
   } catch {
