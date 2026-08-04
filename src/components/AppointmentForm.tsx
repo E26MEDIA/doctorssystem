@@ -286,45 +286,39 @@ export function AppointmentForm() {
           <p className="mt-3 text-sm text-[var(--ink-soft)]">
             Clinic closed this day
           </p>
+        ) : !date ? (
+          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+            Select a date to see available times
+          </p>
         ) : timeSlots.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-soft)]">
             No slots scheduled for this date
           </p>
         ) : openSlots.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--ink-soft)]">
-            All slots for this date are already booked
+            No available slots for this date — please pick another day
           </p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-2">
-            {timeSlots.map((slot) => {
-              const taken = booked.includes(slot);
+            {openSlots.map((slot) => {
               const active = form.time === slot;
               return (
                 <button
                   key={slot}
                   type="button"
-                  disabled={taken}
                   onClick={() => setForm({ ...form, time: slot })}
                   className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                    taken
-                      ? "cursor-not-allowed border-[var(--line)] bg-[var(--sand)] text-[var(--muted)] line-through opacity-70"
-                      : active
-                        ? "border-[var(--teal)] bg-[var(--teal)] text-white"
-                        : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
+                    active
+                      ? "border-[var(--teal)] bg-[var(--teal)] text-white"
+                      : "border-[var(--line)] bg-white text-[var(--ink-soft)] hover:border-[var(--teal)]"
                   }`}
                   aria-pressed={active}
-                  title={taken ? "Already booked" : to12h(slot)}
                 >
                   {to12h(slot)}
                 </button>
               );
             })}
           </div>
-        )}
-        {!dayBlocked && openSlots.length > 0 && (
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Greyed-out times are already taken and cannot be booked again.
-          </p>
         )}
       </div>
 

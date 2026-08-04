@@ -175,10 +175,14 @@ export async function POST(request: Request) {
       emailSent = result.sent;
 
       if (config.notifyOnBooking && config.notifyEmail) {
+        const whenLabel = format(
+          new Date(`${data.date}T00:00:00`),
+          "EEEE, d MMMM yyyy",
+        );
         await sendMail({
           to: config.notifyEmail,
-          subject: `New clinic booking — ${data.date} ${time12}`,
-          text: `${data.name} booked a clinic visit on ${data.date} at ${time12}.\nPhone: ${data.phone}\nEmail: ${data.email}`,
+          subject: `New clinic booking — ${whenLabel} at ${time12}`,
+          text: `${data.name} booked a clinic visit.\nDate: ${whenLabel}\nTime: ${time12}\nPhone: ${data.phone}\nEmail: ${data.email}`,
         });
       }
     }

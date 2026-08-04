@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { checkoutPaymentSchema } from "@/lib/validators";
 import { getClinicConfig } from "@/lib/settings";
@@ -229,10 +230,14 @@ export async function POST(request: Request, context: Ctx) {
   });
 
   if (clinic.notifyOnBooking && clinic.notifyEmail) {
+    const whenLabel = format(
+      new Date(`${appointment.date}T00:00:00`),
+      "EEEE, d MMMM yyyy",
+    );
     await sendMail({
       to: clinic.notifyEmail,
-      subject: `Paid virtual booking — ${appointment.date} ${time12}`,
-      text: `${appointment.name} paid ${amountLabel} (${paymentRef}) for virtual visit.\nMeet: ${meetLink}\nPhone: ${appointment.phone}\nEmail: ${appointment.email}`,
+      subject: `Paid virtual booking — ${whenLabel} at ${time12}`,
+      text: `${appointment.name} paid ${amountLabel} (${paymentRef}) for a virtual visit.\nDate: ${whenLabel}\nTime: ${time12}\nMeet: ${meetLink}\nPhone: ${appointment.phone}\nEmail: ${appointment.email}`,
     });
   }
 

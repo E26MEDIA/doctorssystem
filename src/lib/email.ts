@@ -1,9 +1,23 @@
+import { format, parseISO } from "date-fns";
+
 type MailPayload = {
   to: string;
   subject: string;
   text: string;
   html?: string;
 };
+
+function formatBookingDate(isoDate: string): string {
+  try {
+    return format(parseISO(isoDate), "EEEE, d MMMM yyyy");
+  } catch {
+    return isoDate;
+  }
+}
+
+function bookingWhen(date: string, time12: string): string {
+  return `${formatBookingDate(date)} at ${time12}`;
+}
 
 /**
  * Sends email when SMTP_* env vars are set.
@@ -46,7 +60,9 @@ export async function sendMail(payload: MailPayload): Promise<{
       to: payload.to,
       subject: payload.subject,
       text: payload.text,
-      html: payload.html || `<pre style="font-family:sans-serif;white-space:pre-wrap">${payload.text}</pre>`,
+      html:
+        payload.html ||
+        `<pre style="font-family:sans-serif;white-space:pre-wrap">${payload.text}</pre>`,
     });
 
     return { sent: true };
@@ -64,22 +80,25 @@ export function buildVirtualConfirmEmail(input: {
   meetCode: string;
   doctorName: string;
 }) {
-  const subject = `Virtual consultation confirmed — ${input.date} at ${input.time12}`;
+  const when = bookingWhen(input.date, input.time12);
+  const subject = `Virtual consultation confirmed — ${when}`;
   const text = [
     `Hi ${input.patientName},`,
     "",
     `Your virtual consultation with ${input.doctorName} is confirmed.`,
     "",
-    `Date: ${input.date}`,
+    "YOUR BOOKING",
+    `Date: ${formatBookingDate(input.date)}`,
     `Time: ${input.time12}`,
+    "",
+    "Please join at the scheduled time above.",
     "",
     "Google Meet link:",
     input.meetLink,
     "",
     `Meeting code: ${input.meetCode}`,
     "",
-    "Please save this email or screenshot the confirmation page.",
-    "Join a few minutes early on the scheduled time.",
+    "Join a few minutes early.",
     "",
     "— Honnani GI Surgery",
   ].join("\n");
@@ -98,29 +117,31 @@ export function buildPaymentReceiptEmail(input: {
   paymentRef: string;
   paymentMethod: string;
 }) {
-  const subject = `Payment receipt & Meet link — ${input.date} at ${input.time12}`;
+  const when = bookingWhen(input.date, input.time12);
+  const subject = `Your appointment — ${when}`;
   const text = [
     `Hi ${input.patientName},`,
     "",
-    `Thank you. Your consultation fee payment is confirmed.`,
+    `Thank you. Your consultation fee is paid and your visit is confirmed.`,
     "",
-    "— Payment receipt —",
-    `Amount: ${input.amountLabel}`,
-    `Reference: ${input.paymentRef}`,
-    `Method: ${input.paymentMethod}`,
-    `Status: Paid (demo gateway)`,
-    "",
-    "— Appointment —",
+    "YOUR BOOKING TIME",
     `Doctor: ${input.doctorName}`,
-    `Date: ${input.date}`,
+    `Date: ${formatBookingDate(input.date)}`,
     `Time: ${input.time12}`,
     `Type: Virtual consultation`,
     "",
-    "— Google Meet —",
+    `Please join Google Meet at ${input.time12} on ${formatBookingDate(input.date)}.`,
+    "",
+    "Google Meet link:",
     input.meetLink,
+    "",
     `Meeting code: ${input.meetCode}`,
     "",
-    "Join a few minutes before your scheduled time.",
+    "PAYMENT RECEIPT",
+    `Amount: ${input.amountLabel}`,
+    `Reference: ${input.paymentRef}`,
+    `Method: ${input.paymentMethod}`,
+    `Status: Paid`,
     "",
     "— Honnani GI Surgery",
     "Yenepoya Specialty Hospital, Mangaluru",
@@ -136,14 +157,18 @@ export function buildClinicConfirmEmail(input: {
   doctorName: string;
   note: string;
 }) {
-  const subject = `Clinic visit confirmed — ${input.date} at ${input.time12}`;
+  const when = bookingWhen(input.date, input.time12);
+  const subject = `Clinic visit confirmed — ${when}`;
   const text = [
     `Hi ${input.patientName},`,
     "",
     `Your clinic consultation with ${input.doctorName} is confirmed.`,
     "",
-    `Date: ${input.date}`,
+    "YOUR BOOKING TIME",
+    `Date: ${formatBookingDate(input.date)}`,
     `Time: ${input.time12}`,
+    "",
+    `Please arrive at the clinic for your appointment at ${input.time12} on ${formatBookingDate(input.date)}.`,
     "",
     input.note,
     "",
