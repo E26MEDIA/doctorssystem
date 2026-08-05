@@ -308,3 +308,66 @@ body {
     padding-right: 2.75rem;
   }
 }
+
+/* Patient reviews — slow horizontal scroll on mobile */
+.testimonial-marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 6%,
+    black 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 6%,
+    black 94%,
+    transparent
+  );
+}
+
+.testimonial-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: testimonial-scroll 45s linear infinite;
+  will-change: transform;
+}
+
+.testimonial-card {
+  width: min(88vw, 320px);
+  padding: 1.25rem 1.35rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: white;
+  box-shadow: 0 12px 32px rgba(6, 51, 44, 0.06);
+}
+
+@keyframes testimonial-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonial-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .testimonial-marquee {
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .testimonial-card {
+    width: 100%;
+  }
+}

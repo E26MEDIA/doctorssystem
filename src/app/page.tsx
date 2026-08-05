@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { GallerySection } from "@/components/GallerySection";
-import { articles, doctorProfile, testimonials } from "@/lib/clinic";
+import { TestimonialsSection } from "@/components/TestimonialsSection";
+import { articles, doctorProfile } from "@/lib/clinic";
 import { getActiveServices, getClinicConfig } from "@/lib/settings";
 
 export default async function HomePage() {
@@ -279,24 +280,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section-pad">
-        <div className="mx-auto max-w-6xl px-5 md:px-8">
-          <h2 className="display text-4xl md:text-5xl">Patient voices</h2>
-          <div className="mt-12 grid gap-10 md:grid-cols-3">
-            {testimonials.map((t) => (
-              <blockquote key={t.name}>
-                <p className="text-lg leading-relaxed text-[var(--ink-soft)]">
-                  “{t.quote}”
-                </p>
-                <footer className="mt-6">
-                  <p className="font-medium text-[var(--deep)]">{t.name}</p>
-                  <p className="text-sm text-[var(--muted)]">{t.detail}</p>
-                </footer>
-              </blockquote>
-            ))}
-          </div>
-        </div>
-      </section>
+      <TestimonialsSection />
     </>
   );
 }
