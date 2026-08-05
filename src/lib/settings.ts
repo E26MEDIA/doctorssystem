@@ -26,6 +26,10 @@ export {
   buildDateScheduleWindow,
   formatScheduleLabel,
   isDateClosedInSchedule,
+  isScheduleDateEditable,
+  SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+  getScheduleEditCutoffDate,
+  scheduleRowsEqual,
 };
 
 export type ClinicConfig = {
@@ -109,9 +113,9 @@ export function defaultsConfig(): ClinicConfig {
       ...row,
       slots: [...row.slots],
     })),
-    dateSchedule: buildDateScheduleWindow(60, 1, [], { fillDefaults: true }),
+    dateSchedule: buildDateScheduleWindow(60, 7, [], { fillDefaults: true }),
     bookingEnabled: true,
-    minLeadDays: 1,
+    minLeadDays: 7,
     maxAdvanceDays: 60,
     autoConfirm: true,
     confirmationNote:

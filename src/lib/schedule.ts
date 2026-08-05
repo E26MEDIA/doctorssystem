@@ -8,6 +8,9 @@ export type DateScheduleRow = {
   slots: string[];
 };
 
+/** Schedule edits (open/off, times) must be at least this many days ahead. */
+export const SCHEDULE_ADJUSTMENT_LEAD_DAYS = 7;
+
 export function formatScheduleLabel(dateStr: string) {
   const d = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
@@ -79,4 +82,29 @@ export function isDateClosedInSchedule(
   const exact = schedule.find((row) => row.date === date);
   // Missing from schedule or explicitly Off = closed
   return !exact || !exact.enabled;
+}
+
+export function getScheduleEditCutoffDate(
+  leadDays = SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+): string {
+  const d = addDays(new Date(), leadDays);
+  d.setHours(0, 0, 0, 0);
+  return format(d, "yyyy-MM-dd");
+}
+
+/** Dates on or before the cutoff cannot be edited in admin (7-day adjustment rule). */
+export function isScheduleDateEditable(
+  date: string,
+  leadDays = SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  return date >= getScheduleEditCutoffDate(leadDays);
+}
+
+export function scheduleRowsEqual(a: DateScheduleRow, b: DateScheduleRow): boolean {
+  if (a.enabled !== b.enabled) return false;
+  const as = [...a.slots].sort();
+  const bs = [...b.slots].sort();
+  if (as.length !== bs.length) return false;
+  return as.every((slot, i) => slot === bs[i]);
 }

@@ -7,7 +7,12 @@ import type {
   HourRow,
   ServiceItem,
 } from "@/lib/settings";
-import { buildDateScheduleWindow } from "@/lib/schedule";
+import {
+  buildDateScheduleWindow,
+  isScheduleDateEditable,
+  SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+  getScheduleEditCutoffDate,
+} from "@/lib/schedule";
 
 type Appointment = {
   id: string;
@@ -60,7 +65,7 @@ const emptySettings = (): ClinicConfig => ({
   weeklySchedule: [],
   dateSchedule: [],
   bookingEnabled: true,
-  minLeadDays: 1,
+  minLeadDays: 7,
   maxAdvanceDays: 60,
   autoConfirm: true,
   confirmationNote: "",
@@ -100,17 +105,20 @@ function DateScheduleEditor({
   schedule: DateScheduleRow[];
   onChange: (updated: DateScheduleRow[]) => void;
 }) {
+  const editCutoff = getScheduleEditCutoffDate();
   const [openDate, setOpenDate] = useState<string | null>(
     () => schedule.find((r) => r.enabled)?.date ?? schedule[0]?.date ?? null,
   );
 
   function updateDay(date: string, patch: Partial<DateScheduleRow>) {
+    if (!isScheduleDateEditable(date)) return;
     onChange(
       schedule.map((row) => (row.date === date ? { ...row, ...patch } : row)),
     );
   }
 
   function toggleSlot(date: string, slot: string, currentSlots: string[]) {
+    if (!isScheduleDateEditable(date)) return;
     const next = currentSlots.includes(slot)
       ? currentSlots.filter((s) => s !== slot)
       : [...currentSlots, slot].sort();
@@ -119,6 +127,7 @@ function DateScheduleEditor({
 
   const openCount = schedule.filter((r) => r.enabled && r.slots.length > 0).length;
   const offCount = schedule.filter((r) => !r.enabled).length;
+  const lockedCount = schedule.filter((r) => !isScheduleDateEditable(r.date)).length;
 
   return (
     <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--sand)]/35 p-5">
@@ -127,17 +136,19 @@ function DateScheduleEditor({
       </h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Set times for each calendar date. Turn a day <strong>Off</strong> when the
-        doctor is unavailable — that date cannot be booked. Open days only show the
-        times you tap below.
+        doctor is unavailable. Changes must be made at least{" "}
+        <strong>{SCHEDULE_ADJUSTMENT_LEAD_DAYS} days</strong> before the visit
+        (from {editCutoff} onward).
       </p>
       <p className="mt-2 text-xs text-[var(--muted)]">
         {openCount} open day{openCount === 1 ? "" : "s"} with times · {offCount}{" "}
-        closed
+        closed · {lockedCount} locked within {SCHEDULE_ADJUSTMENT_LEAD_DAYS} days
       </p>
 
       <div className="mt-5 space-y-3">
         {schedule.map((row) => {
           const expanded = openDate === row.date;
+          const locked = !isScheduleDateEditable(row.date);
           return (
             <div
               key={row.date}
@@ -145,7 +156,7 @@ function DateScheduleEditor({
                 row.enabled
                   ? "border-[var(--line)]"
                   : "border-[var(--line)] bg-[var(--sand)]/40"
-              }`}
+              } ${locked ? "opacity-80" : ""}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <button
@@ -157,36 +168,44 @@ function DateScheduleEditor({
                 >
                   <p className="font-semibold text-[var(--deep)]">{row.label}</p>
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    {!row.enabled
-                      ? "Closed — patients cannot book"
-                      : row.slots.length
-                        ? row.slots.map(to12h).join(" · ")
-                        : "Open — tap to choose times"}
+                    {locked
+                      ? "Locked — schedule was set; changes need 7+ days notice"
+                      : !row.enabled
+                        ? "Closed — patients cannot book"
+                        : row.slots.length
+                          ? row.slots.map(to12h).join(" · ")
+                          : "Open — tap to choose times"}
                   </p>
                 </button>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !row.enabled;
-                      updateDay(row.date, {
-                        enabled: next,
-                        slots: next ? row.slots : [],
-                      });
-                      if (next) setOpenDate(row.date);
-                    }}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                      row.enabled
-                        ? "bg-[var(--teal)] text-white"
-                        : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
-                    }`}
-                  >
-                    {row.enabled ? "Open" : "Off"}
-                  </button>
+                  {locked ? (
+                    <span className="rounded-full border border-[var(--line)] bg-[var(--sand)] px-4 py-1.5 text-sm text-[var(--muted)]">
+                      Locked
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !row.enabled;
+                        updateDay(row.date, {
+                          enabled: next,
+                          slots: next ? row.slots : [],
+                        });
+                        if (next) setOpenDate(row.date);
+                      }}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                        row.enabled
+                          ? "bg-[var(--teal)] text-white"
+                          : "border border-[var(--line)] bg-white text-[var(--ink-soft)]"
+                      }`}
+                    >
+                      {row.enabled ? "Open" : "Off"}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {expanded && row.enabled && (
+              {expanded && row.enabled && !locked && (
                 <div className="border-t border-[var(--line)] px-4 pb-4 pt-3">
                   <p className="mb-2 text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
                     Available times for this date
@@ -228,6 +247,25 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 60);
+}
+
+async function adminFetch(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (
+    init?.body &&
+    !headers.has("Content-Type") &&
+    !(init.body instanceof FormData)
+  ) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(input, {
+    ...init,
+    credentials: "same-origin",
+    headers,
+  });
 }
 
 function TabButton({
@@ -316,9 +354,14 @@ export function AdminDashboard() {
   const [securityMsg, setSecurityMsg] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/data");
+    const res = await adminFetch("/api/admin/data");
     if (res.status === 401) {
       setAuthed(false);
+      setChecking(false);
+      setError("Session expired — please sign in again.");
+      return;
+    }
+    if (!res.ok) {
       setChecking(false);
       return;
     }
@@ -356,9 +399,8 @@ export function AdminDashboard() {
   async function onLogin(e: FormEvent) {
     e.preventDefault();
     setError("");
-    const res = await fetch("/api/admin/login", {
+    const res = await adminFetch("/api/admin/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
     if (!res.ok) {
@@ -371,23 +413,22 @@ export function AdminDashboard() {
   }
 
   async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
+    await adminFetch("/api/admin/logout", { method: "POST" });
     setAuthed(false);
     setAppointments([]);
     setMessages([]);
   }
 
   async function updateStatus(id: string, status: string) {
-    const res = await fetch(`/api/admin/appointments/${id}`, {
+    const res = await adminFetch(`/api/admin/appointments/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
     if (res.ok) await load();
   }
 
   async function markRead(id: string) {
-    const res = await fetch(`/api/admin/messages/${id}`, { method: "PATCH" });
+    const res = await adminFetch(`/api/admin/messages/${id}`, { method: "PATCH" });
     if (res.ok) await load();
   }
 
@@ -395,13 +436,17 @@ export function AdminDashboard() {
     setSaving(true);
     setSaveMsg("");
     const payload = next ?? settings;
-    const res = await fetch("/api/admin/data", {
+    const res = await adminFetch("/api/admin/data", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
     setSaving(false);
+    if (res.status === 401) {
+      setAuthed(false);
+      setSaveMsg("Session expired — please sign in again.");
+      return;
+    }
     if (!res.ok) {
       setSaveMsg(data.error || "Save failed");
       return;
@@ -418,13 +463,12 @@ export function AdminDashboard() {
       ...serviceDraft,
       slug: serviceDraft.slug || slugify(serviceDraft.title),
     };
-    const res = await fetch(
+    const res = await adminFetch(
       editingServiceId
         ? `/api/admin/services/${editingServiceId}`
         : "/api/admin/services",
       {
         method: editingServiceId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       },
     );
@@ -456,7 +500,7 @@ export function AdminDashboard() {
 
   async function deleteService(id: string) {
     if (!confirm("Delete this service?")) return;
-    await fetch(`/api/admin/services/${id}`, { method: "DELETE" });
+    await adminFetch(`/api/admin/services/${id}`, { method: "DELETE" });
     await load();
   }
 
@@ -477,9 +521,8 @@ export function AdminDashboard() {
       setSecurityMsg("New passwords do not match");
       return;
     }
-    const res = await fetch("/api/admin/password", {
+    const res = await adminFetch("/api/admin/password", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
     const data = await res.json();
@@ -1137,14 +1180,17 @@ export function AdminDashboard() {
               Auto-confirm new bookings (otherwise stay pending)
             </label>
             <label className="field">
-              <span>Minimum lead time (days)</span>
+              <span>Minimum booking lead (days)</span>
               <input
                 type="number"
-                min={0}
+                min={SCHEDULE_ADJUSTMENT_LEAD_DAYS}
                 max={30}
                 value={settings.minLeadDays}
                 onChange={(e) => {
-                  const minLeadDays = Number(e.target.value) || 0;
+                  const minLeadDays = Math.max(
+                    SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+                    Number(e.target.value) || SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+                  );
                   setSettings((s) => ({
                     ...s,
                     minLeadDays,
@@ -1156,6 +1202,10 @@ export function AdminDashboard() {
                   }));
                 }}
               />
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Patients can book from {getScheduleEditCutoffDate()} onward (at
+                least {SCHEDULE_ADJUSTMENT_LEAD_DAYS} days ahead).
+              </p>
             </label>
             <label className="field">
               <span>Show schedule for (days ahead)</span>

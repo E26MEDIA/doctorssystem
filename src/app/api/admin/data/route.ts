@@ -10,6 +10,12 @@ import {
   rowToConfig,
 } from "@/lib/settings";
 import {
+  isScheduleDateEditable,
+  scheduleRowsEqual,
+  SCHEDULE_ADJUSTMENT_LEAD_DAYS,
+  type DateScheduleRow,
+} from "@/lib/schedule";
+import {
   assertSameOrigin,
   forbiddenOrigin,
   readJsonLimited,
@@ -110,7 +116,7 @@ const settingsSchema = z.object({
     }),
   ),
   bookingEnabled: z.boolean(),
-  minLeadDays: z.number().int().min(0).max(30),
+  minLeadDays: z.number().int().min(7).max(30),
   maxAdvanceDays: z.number().int().min(1).max(365),
   autoConfirm: z.boolean(),
   confirmationNote: z.string().trim().min(2).max(400),
@@ -145,12 +151,53 @@ export async function PUT(request: Request) {
     }
 
     const s = parsed.data;
+    const existingRow = await ensureClinicSettings();
+    const existingConfig = rowToConfig(existingRow);
+    const existingSaved = JSON.parse(
+      existingRow.dateScheduleJson || "[]",
+    ) as DateScheduleRow[];
+    const existingMap = new Map(existingSaved.map((row) => [row.date, row]));
+
+    for (const row of s.dateSchedule) {
+      if (isScheduleDateEditable(row.date)) continue;
+      const baseline =
+        existingMap.get(row.date) ??
+        existingConfig.dateSchedule.find((r) => r.date === row.date);
+      if (!baseline) continue;
+      const normalized: DateScheduleRow = {
+        date: row.date,
+        label: row.label,
+        enabled: baseline.enabled,
+        slots: baseline.slots ?? [],
+      };
+      if (!scheduleRowsEqual(row, normalized)) {
+        return NextResponse.json(
+          {
+            error: `Schedule changes must be made at least ${SCHEDULE_ADJUSTMENT_LEAD_DAYS} days before the visit date.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const dateSchedule = s.dateSchedule.map((row) => {
+      if (isScheduleDateEditable(row.date)) return row;
+      const baseline =
+        existingMap.get(row.date) ??
+        existingConfig.dateSchedule.find((r) => r.date === row.date);
+      if (!baseline) return row;
+      return {
+        date: row.date,
+        label: row.label,
+        enabled: baseline.enabled,
+        slots: baseline.slots ?? [],
+      };
+    });
+
+    const minLeadDays = Math.max(SCHEDULE_ADJUSTMENT_LEAD_DAYS, s.minLeadDays);
     const uniqueSlots = Array.from(
-      new Set(
-        s.dateSchedule.flatMap((row) => (row.enabled ? row.slots : [])),
-      ),
+      new Set(dateSchedule.flatMap((row) => (row.enabled ? row.slots : []))),
     ).sort();
-    await ensureClinicSettings();
 
     const row = await prisma.clinicSettings.update({
       where: { id: "default" },
@@ -170,9 +217,9 @@ export async function PUT(request: Request) {
           uniqueSlots.length ? uniqueSlots : s.timeSlots,
         ),
         weeklyScheduleJson: JSON.stringify(s.weeklySchedule ?? []),
-        dateScheduleJson: JSON.stringify(s.dateSchedule),
+        dateScheduleJson: JSON.stringify(dateSchedule),
         bookingEnabled: s.bookingEnabled,
-        minLeadDays: s.minLeadDays,
+        minLeadDays,
         maxAdvanceDays: s.maxAdvanceDays,
         autoConfirm: s.autoConfirm,
         confirmationNote: s.confirmationNote,
@@ -184,10 +231,10 @@ export async function PUT(request: Request) {
     });
 
     // Keep BlockedDate table in sync with Off days in the schedule (one source of truth in UI)
-    const offDates = s.dateSchedule
+    const offDates = dateSchedule
       .filter((row) => !row.enabled)
       .map((row) => row.date);
-    const openDates = s.dateSchedule
+    const openDates = dateSchedule
       .filter((row) => row.enabled)
       .map((row) => row.date);
 
