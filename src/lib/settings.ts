@@ -9,10 +9,13 @@ import {
 import {
   buildDateScheduleWindow,
   formatScheduleLabel,
+  getScheduleEditCutoffDate,
   getSlotsForDateRow,
   getSlotsForSavedDate,
   isDateClosedInSchedule,
   isDateClosedInSaved,
+  isScheduleDateEditable,
+  scheduleRowsEqual,
   SCHEDULE_ADJUSTMENT_LEAD_DAYS,
   type DateScheduleRow,
 } from "@/lib/schedule";
