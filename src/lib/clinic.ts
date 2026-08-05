@@ -164,10 +164,29 @@ export const articles = [
     publishedAt: "2026-05-10",
     readTime: "5 min",
     imageUrl: "/images/gallery-3.jpg",
-    body: [
-      "Persistent upper abdominal pain after meals, a noticeable hernia bulge, unexplained weight loss, or jaundice should not be ignored. These can point to gallbladder disease, colorectal issues, or hepato-pancreato-biliary conditions that benefit from specialist review.",
-      "A surgical gastroenterologist evaluates whether medical management is enough or whether laparoscopic or open surgery is the safer path. Bring prior reports, imaging CDs, and a medication list to your first visit — clinic or virtual.",
-      "If symptoms are sudden and severe (intense pain, vomiting blood, high fever, inability to pass stool or gas), seek emergency care first, then arrange follow-up with the surgical team.",
+    blocks: [
+      {
+        type: "paragraph" as const,
+        text: "Persistent upper abdominal pain after meals, a noticeable hernia bulge, unexplained weight loss, or jaundice should not be ignored. These can point to gallbladder disease, colorectal issues, or hepato-pancreato-biliary conditions that benefit from specialist review.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/clinic.jpg",
+        caption: "A calm clinic setting for a careful first assessment",
+      },
+      {
+        type: "paragraph" as const,
+        text: "A surgical gastroenterologist evaluates whether medical management is enough or whether laparoscopic or open surgery is the safer path. Bring prior reports, imaging CDs, and a medication list to your first visit — clinic or virtual.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/doctor.jpg",
+        caption: "Dr. Honnani reviews history, reports, and next steps with patients",
+      },
+      {
+        type: "paragraph" as const,
+        text: "If symptoms are sudden and severe — intense pain, vomiting blood, high fever, or inability to pass stool or gas — seek emergency care first, then arrange follow-up with the surgical team.",
+      },
     ],
   },
   {
@@ -179,10 +198,29 @@ export const articles = [
     publishedAt: "2026-04-02",
     readTime: "6 min",
     imageUrl: "/images/gallery-1.jpg",
-    body: [
-      "Most patients walk the same day or next morning after laparoscopic GI surgery. Short walks reduce clotting risk and help the gut wake up. Rest when tired, but avoid long bed rest.",
-      "Diet usually starts light — clear fluids, then soft foods — as advised for your specific procedure. Wound sites should stay clean and dry; mild bruising around ports is common.",
-      "Call the clinic if you develop fever, increasing redness or discharge at a port site, severe pain not eased by prescribed medicine, persistent vomiting, or shortness of breath.",
+    blocks: [
+      {
+        type: "paragraph" as const,
+        text: "Most patients walk the same day or next morning after laparoscopic GI surgery. Short walks reduce clotting risk and help the gut wake up. Rest when tired, but avoid long bed rest.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/gallery-5.jpg",
+        caption: "Gentle walking is usually encouraged early after laparoscopic surgery",
+      },
+      {
+        type: "paragraph" as const,
+        text: "Diet usually starts light — clear fluids, then soft foods — as advised for your specific procedure. Wound sites should stay clean and dry; mild bruising around ports is common and usually settles over a few days.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/gallery-6.jpg",
+        caption: "Clean, dry wound care helps port sites heal smoothly",
+      },
+      {
+        type: "paragraph" as const,
+        text: "Call the clinic if you develop fever, increasing redness or discharge at a port site, severe pain not eased by prescribed medicine, persistent vomiting, or shortness of breath.",
+      },
     ],
   },
   {
@@ -194,10 +232,29 @@ export const articles = [
     publishedAt: "2026-03-18",
     readTime: "4 min",
     imageUrl: "/images/virtual.jpg",
-    body: [
-      "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. After you reserve a slot, complete checkout to receive your Google Meet link and payment receipt by email.",
-      "Choose a clinic consultation for new abdominal findings, hernia assessment, pre-operative planning that needs examination, or when dressing changes and in-person counselling matter.",
-      "Either way, pick only an open slot from the doctor’s weekly schedule. Available slots confirm instantly — no waiting for a second approval step.",
+    blocks: [
+      {
+        type: "paragraph" as const,
+        text: "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. After you reserve a slot, complete checkout to receive your Google Meet link and payment receipt by email.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/gallery-4.jpg",
+        caption: "Virtual visits work well for report review and follow-up counselling",
+      },
+      {
+        type: "paragraph" as const,
+        text: "Choose a clinic consultation for new abdominal findings, hernia assessment, pre-operative planning that needs examination, or when dressing changes and in-person counselling matter.",
+      },
+      {
+        type: "image" as const,
+        src: "/images/gallery-3.jpg",
+        caption: "In-person visits help when examination or surgical planning is needed",
+      },
+      {
+        type: "paragraph" as const,
+        text: "Either way, pick an open slot from the doctor’s date-based schedule. Available times confirm instantly — no waiting for a second approval step.",
+      },
     ],
   },
 ] as const;

@@ -19,6 +19,11 @@ import {
   SCHEDULE_ADJUSTMENT_LEAD_DAYS,
   type DateScheduleRow,
 } from "@/lib/schedule";
+import {
+  isLegacyStringBody,
+  parseJournalBlocks,
+  type JournalBlock,
+} from "@/lib/journal";
 
 export type HourRow = { day: string; time: string };
 export type WeeklyScheduleRow = {
@@ -341,7 +346,9 @@ export type JournalArticleItem = {
   title: string;
   category: string;
   excerpt: string;
+  /** @deprecated use blocks — kept for admin textarea fallback */
   body: string[];
+  blocks: JournalBlock[];
   imageUrl: string;
   publishedAt: string;
   readTime: string;
@@ -349,39 +356,45 @@ export type JournalArticleItem = {
   sortOrder: number;
 };
 
-function parseBodyJson(value: string): string[] {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (Array.isArray(parsed)) {
-      return parsed.filter((p): p is string => typeof p === "string" && p.trim().length > 0);
-    }
-  } catch {
-    /* ignore */
-  }
-  return value
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
-
 export async function ensureJournalArticles() {
   for (const [i, article] of articles.entries()) {
-    await prisma.journalArticle.upsert({
+    const bodyJson = JSON.stringify(article.blocks);
+    const existing = await prisma.journalArticle.findUnique({
       where: { slug: article.slug },
-      update: {},
-      create: {
-        slug: article.slug,
-        title: article.title,
-        category: article.category,
-        excerpt: article.excerpt,
-        bodyJson: JSON.stringify([...article.body]),
-        imageUrl: article.imageUrl,
-        publishedAt: article.publishedAt,
-        readTime: article.readTime,
-        active: true,
-        sortOrder: i,
-      },
     });
+
+    if (!existing) {
+      await prisma.journalArticle.create({
+        data: {
+          slug: article.slug,
+          title: article.title,
+          category: article.category,
+          excerpt: article.excerpt,
+          bodyJson,
+          imageUrl: article.imageUrl,
+          publishedAt: article.publishedAt,
+          readTime: article.readTime,
+          active: true,
+          sortOrder: i,
+        },
+      });
+      continue;
+    }
+
+    // Upgrade legacy text-only seed articles to multi-image blocks once
+    if (isLegacyStringBody(existing.bodyJson)) {
+      await prisma.journalArticle.update({
+        where: { slug: article.slug },
+        data: {
+          bodyJson,
+          imageUrl: article.imageUrl,
+          title: article.title,
+          category: article.category,
+          excerpt: article.excerpt,
+          readTime: article.readTime,
+        },
+      });
+    }
   }
   return prisma.journalArticle.findMany({
     orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
@@ -391,13 +404,17 @@ export async function ensureJournalArticles() {
 function mapJournalRow(
   row: Awaited<ReturnType<typeof ensureJournalArticles>>[number],
 ): JournalArticleItem {
+  const blocks = parseJournalBlocks(row.bodyJson);
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
     category: row.category,
     excerpt: row.excerpt,
-    body: parseBodyJson(row.bodyJson),
+    body: blocks
+      .filter((b): b is Extract<JournalBlock, { type: "paragraph" }> => b.type === "paragraph")
+      .map((b) => b.text),
+    blocks,
     imageUrl: row.imageUrl || "/images/gallery-1.jpg",
     publishedAt: row.publishedAt,
     readTime: row.readTime,

@@ -8,6 +8,7 @@ import type {
   JournalArticleItem,
   ServiceItem,
 } from "@/lib/settings";
+import type { JournalBlock } from "@/lib/journal";
 import {
   buildDateScheduleWindow,
   isScheduleDateEditable,
@@ -59,6 +60,7 @@ const emptyJournalDraft = (): JournalArticleItem => ({
   category: "Guidance",
   excerpt: "",
   body: [""],
+  blocks: [{ type: "paragraph", text: "" }],
   imageUrl: "/images/gallery-1.jpg",
   publishedAt: new Date().toISOString().slice(0, 10),
   readTime: "5 min",
@@ -368,6 +370,7 @@ export function AdminDashboard() {
   const [journalDraft, setJournalDraft] =
     useState<JournalArticleItem>(emptyJournalDraft);
   const [editingJournalId, setEditingJournalId] = useState<string | null>(null);
+  const [uploadingJournal, setUploadingJournal] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -533,16 +536,44 @@ export function AdminDashboard() {
     e.preventDefault();
     setSaving(true);
     setSaveMsg("");
-    const payload = {
-      ...journalDraft,
-      slug: journalDraft.slug || slugify(journalDraft.title),
-      body: journalDraft.body.map((p) => p.trim()).filter(Boolean),
-    };
-    if (payload.body.length === 0) {
+    const blocks = journalDraft.blocks
+      .map((block) => {
+        if (block.type === "paragraph") {
+          return { ...block, text: block.text.trim() };
+        }
+        return {
+          ...block,
+          src: block.src.trim(),
+          caption: block.caption?.trim() || undefined,
+        };
+      })
+      .filter((block) =>
+        block.type === "paragraph" ? Boolean(block.text) : Boolean(block.src),
+      );
+
+    if (!blocks.some((b) => b.type === "paragraph")) {
       setSaving(false);
-      setSaveMsg("Add at least one body paragraph");
+      setSaveMsg("Add at least one text paragraph");
       return;
     }
+    if (!journalDraft.imageUrl.trim()) {
+      setSaving(false);
+      setSaveMsg("Choose a preview image");
+      return;
+    }
+
+    const payload = {
+      title: journalDraft.title,
+      slug: journalDraft.slug || slugify(journalDraft.title),
+      category: journalDraft.category,
+      excerpt: journalDraft.excerpt,
+      blocks,
+      imageUrl: journalDraft.imageUrl,
+      publishedAt: journalDraft.publishedAt,
+      readTime: journalDraft.readTime,
+      active: journalDraft.active,
+      sortOrder: journalDraft.sortOrder,
+    };
     const res = await adminFetch(
       editingJournalId
         ? `/api/admin/journal/${editingJournalId}`
@@ -566,8 +597,18 @@ export function AdminDashboard() {
 
   function editJournal(article: JournalArticleItem) {
     setEditingJournalId(article.id ?? null);
+    const blocks =
+      article.blocks?.length > 0
+        ? article.blocks
+        : article.body.length
+          ? article.body.map((text) => ({
+              type: "paragraph" as const,
+              text,
+            }))
+          : [{ type: "paragraph" as const, text: "" }];
     setJournalDraft({
       ...article,
+      blocks,
       body: article.body.length ? [...article.body] : [""],
     });
     setTab("journal");
@@ -577,6 +618,74 @@ export function AdminDashboard() {
     if (!confirm("Delete this journal article?")) return;
     await adminFetch(`/api/admin/journal/${id}`, { method: "DELETE" });
     await load();
+  }
+
+  async function uploadJournalFile(file: File): Promise<string | null> {
+    setUploadingJournal(true);
+    setSaveMsg("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: form,
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveMsg(data.error || "Upload failed");
+        return null;
+      }
+      setSaveMsg("Image uploaded");
+      return data.url as string;
+    } catch {
+      setSaveMsg("Upload failed");
+      return null;
+    } finally {
+      setUploadingJournal(false);
+    }
+  }
+
+  async function uploadJournalImage(file: File, mode: "preview" | "insert") {
+    const url = await uploadJournalFile(file);
+    if (!url) return null;
+    if (mode === "preview") {
+      setJournalDraft((d) => ({ ...d, imageUrl: url }));
+    } else {
+      setJournalDraft((d) => ({
+        ...d,
+        blocks: [...d.blocks, { type: "image", src: url, caption: "" }],
+      }));
+    }
+    return url;
+  }
+
+  function updateBlock(index: number, patch: Partial<JournalBlock>) {
+    setJournalDraft((d) => ({
+      ...d,
+      blocks: d.blocks.map((block, i) =>
+        i === index ? ({ ...block, ...patch } as JournalBlock) : block,
+      ),
+    }));
+  }
+
+  function removeBlock(index: number) {
+    setJournalDraft((d) => ({
+      ...d,
+      blocks: d.blocks.filter((_, i) => i !== index),
+    }));
+  }
+
+  function moveBlock(index: number, direction: -1 | 1) {
+    setJournalDraft((d) => {
+      const next = [...d.blocks];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return d;
+      const tmp = next[index];
+      next[index] = next[target];
+      next[target] = tmp;
+      return { ...d, blocks: next };
+    });
   }
 
   function rebuildScheduleWindow(
@@ -1235,9 +1344,8 @@ export function AdminDashboard() {
               {editingJournalId ? "Edit article" : "Add journal article"}
             </h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Cards on the website show the preview image, title, and excerpt.
-              Use site paths like /images/gallery-1.jpg for images already on
-              the site.
+              Upload a preview image for journal cards. Inside the article, mix
+              text paragraphs with as many photos as you need.
             </p>
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <label className="field">
@@ -1323,20 +1431,6 @@ export function AdminDashboard() {
                 />
               </label>
               <label className="field md:col-span-2">
-                <span>Preview image URL</span>
-                <input
-                  required
-                  value={journalDraft.imageUrl}
-                  onChange={(e) =>
-                    setJournalDraft({
-                      ...journalDraft,
-                      imageUrl: e.target.value,
-                    })
-                  }
-                  placeholder="/images/gallery-1.jpg"
-                />
-              </label>
-              <label className="field md:col-span-2">
                 <span>Excerpt (card preview text)</span>
                 <textarea
                   required
@@ -1350,20 +1444,193 @@ export function AdminDashboard() {
                   }
                 />
               </label>
-              <label className="field md:col-span-2">
-                <span>Article body (one paragraph per line break block)</span>
-                <textarea
-                  required
-                  rows={8}
-                  value={journalDraft.body.join("\n\n")}
-                  onChange={(e) =>
-                    setJournalDraft({
-                      ...journalDraft,
-                      body: e.target.value.split(/\n\n+/),
-                    })
-                  }
-                />
-              </label>
+
+              <div className="md:col-span-2 rounded-xl border border-[var(--line)] bg-[var(--sand)]/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Preview image (card cover)
+                </p>
+                <div className="mt-3 flex flex-wrap items-start gap-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={journalDraft.imageUrl}
+                    alt="Preview"
+                    className="h-28 w-44 rounded-lg object-cover border border-[var(--line)] bg-white"
+                  />
+                  <div className="space-y-3">
+                    <label className="btn-ghost inline-flex cursor-pointer !py-2">
+                      {uploadingJournal ? "Uploading…" : "Upload preview image"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={uploadingJournal}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) await uploadJournalImage(file, "preview");
+                        }}
+                      />
+                    </label>
+                    <p className="text-xs text-[var(--muted)]">
+                      This single image appears on journal cards and at the top
+                      of the article.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Article content
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-ghost !py-2"
+                      onClick={() =>
+                        setJournalDraft((d) => ({
+                          ...d,
+                          blocks: [
+                            ...d.blocks,
+                            { type: "paragraph", text: "" },
+                          ],
+                        }))
+                      }
+                    >
+                      + Paragraph
+                    </button>
+                    <label className="btn-ghost inline-flex cursor-pointer !py-2">
+                      {uploadingJournal ? "Uploading…" : "+ Upload image"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={uploadingJournal}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) await uploadJournalImage(file, "insert");
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {journalDraft.blocks.map((block, index) => (
+                  <div
+                    key={`${block.type}-${index}`}
+                    className="rounded-xl border border-[var(--line)] bg-white p-4"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
+                        {block.type === "paragraph"
+                          ? `Paragraph ${index + 1}`
+                          : `Image ${index + 1}`}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs"
+                          onClick={() => moveBlock(index, -1)}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs"
+                          onClick={() => moveBlock(index, 1)}
+                        >
+                          Down
+                        </button>
+                        {block.type === "image" && (
+                          <button
+                            type="button"
+                            className="btn-ghost !py-1.5 !text-xs"
+                            onClick={() =>
+                              setJournalDraft((d) => ({
+                                ...d,
+                                imageUrl: block.src,
+                              }))
+                            }
+                          >
+                            Use as preview
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-ghost !py-1.5 !text-xs !text-red-700"
+                          onClick={() => removeBlock(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {block.type === "paragraph" ? (
+                      <textarea
+                        rows={4}
+                        className="w-full rounded-lg border border-[var(--line)] px-3 py-2 text-sm"
+                        value={block.text}
+                        onChange={(e) =>
+                          updateBlock(index, { text: e.target.value })
+                        }
+                        placeholder="Write this section of the article…"
+                      />
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={block.src}
+                          alt=""
+                          className="h-28 w-full rounded-lg object-cover border border-[var(--line)]"
+                        />
+                        <div className="space-y-3">
+                          <label className="field">
+                            <span>Caption (optional)</span>
+                            <input
+                              value={block.caption ?? ""}
+                              onChange={(e) =>
+                                updateBlock(index, {
+                                  caption: e.target.value,
+                                })
+                              }
+                              placeholder="Short caption under the photo"
+                            />
+                          </label>
+                          <label className="btn-ghost inline-flex cursor-pointer !py-2">
+                            Replace image
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              className="hidden"
+                              disabled={uploadingJournal}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = "";
+                                if (!file) return;
+                                const url = await uploadJournalFile(file);
+                                if (!url) return;
+                                setJournalDraft((d) => ({
+                                  ...d,
+                                  imageUrl:
+                                    d.imageUrl === block.src ? url : d.imageUrl,
+                                  blocks: d.blocks.map((b, i) =>
+                                    i === index && b.type === "image"
+                                      ? { ...b, src: url }
+                                      : b,
+                                  ),
+                                }));
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               <label className="flex items-center gap-3 text-sm text-[var(--ink-soft)]">
                 <input
                   type="checkbox"
@@ -1418,7 +1685,10 @@ export function AdminDashboard() {
                       {article.title}{" "}
                       <span className="text-xs text-[var(--muted)]">
                         ({article.active ? "active" : "hidden"}) ·{" "}
-                        {article.category}
+                        {article.category} ·{" "}
+                        {(article.blocks ?? []).filter((b) => b.type === "image")
+                          .length}{" "}
+                        photos
                       </span>
                     </p>
                     <p className="mt-1 text-sm text-[var(--ink-soft)]">

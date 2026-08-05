@@ -1,39 +1,13 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureJournalArticles } from "@/lib/settings";
+import { journalArticleSchema } from "@/lib/journalSchema";
 import {
   assertSameOrigin,
   forbiddenOrigin,
   readJsonLimited,
 } from "@/lib/security";
-
-const articleSchema = z.object({
-  title: z.string().trim().min(2).max(160),
-  slug: z
-    .string()
-    .trim()
-    .min(2)
-    .max(80)
-    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, hyphens"),
-  category: z.string().trim().min(2).max(60),
-  excerpt: z.string().trim().min(5).max(400),
-  body: z.array(z.string().trim().min(1).max(2000)).min(1).max(40),
-  imageUrl: z
-    .string()
-    .trim()
-    .min(1)
-    .max(300)
-    .refine(
-      (v) => v.startsWith("/") || /^https?:\/\//i.test(v),
-      "Use a site path like /images/gallery-1.jpg or a full https URL",
-    ),
-  publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  readTime: z.string().trim().min(2).max(20),
-  active: z.boolean(),
-  sortOrder: z.number().int().min(0).max(999),
-});
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -49,12 +23,23 @@ export async function POST(request: Request) {
   }
   if (!assertSameOrigin(request)) return forbiddenOrigin();
 
-  const body = await readJsonLimited(request, 64_000);
+  const body = await readJsonLimited(request, 200_000);
   if (!body.ok) return body.response;
 
-  const parsed = articleSchema.safeParse(body.data);
+  const parsed = journalArticleSchema.safeParse(body.data);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid article" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid article", issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const hasParagraph = parsed.data.blocks.some((b) => b.type === "paragraph");
+  if (!hasParagraph) {
+    return NextResponse.json(
+      { error: "Add at least one text paragraph" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -64,7 +49,7 @@ export async function POST(request: Request) {
         slug: parsed.data.slug,
         category: parsed.data.category,
         excerpt: parsed.data.excerpt,
-        bodyJson: JSON.stringify(parsed.data.body),
+        bodyJson: JSON.stringify(parsed.data.blocks),
         imageUrl: parsed.data.imageUrl,
         publishedAt: parsed.data.publishedAt,
         readTime: parsed.data.readTime,

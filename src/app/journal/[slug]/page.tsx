@@ -44,11 +44,32 @@ export default async function ArticlePage({
             })}{" "}
             · {article.readTime}
           </p>
-          <div className="prose-clinic mt-10 space-y-5 text-lg leading-relaxed text-[var(--ink-soft)]">
-            {article.body.map((paragraph) => (
-              <p key={paragraph.slice(0, 48)}>{paragraph}</p>
-            ))}
+
+          <div className="mt-10 space-y-8 text-lg leading-relaxed text-[var(--ink-soft)]">
+            {article.blocks.map((block, index) => {
+              if (block.type === "paragraph") {
+                return <p key={`p-${index}`}>{block.text}</p>;
+              }
+              return (
+                <figure key={`img-${index}`} className="my-2">
+                  <div className="overflow-hidden rounded-[1.1rem] border border-[var(--line)] bg-[var(--sand)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={block.src}
+                      alt={block.caption || article.title}
+                      className="max-h-[28rem] w-full object-cover"
+                    />
+                  </div>
+                  {block.caption ? (
+                    <figcaption className="mt-3 text-center text-sm text-[var(--muted)]">
+                      {block.caption}
+                    </figcaption>
+                  ) : null}
+                </figure>
+              );
+            })}
           </div>
+
           <div className="mt-12 rounded-[1.25rem] border border-[var(--line)] bg-white/80 p-6">
             <p className="text-[var(--ink-soft)]">
               Ready to discuss your case with Dr. Honnani?
