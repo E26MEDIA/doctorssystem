@@ -64,6 +64,7 @@ const emptySettings = (): ClinicConfig => ({
   timeSlots: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
   weeklySchedule: [],
   dateSchedule: [],
+  savedDateSchedule: [],
   bookingEnabled: true,
   minLeadDays: 7,
   maxAdvanceDays: 60,
@@ -449,6 +450,9 @@ export function AdminDashboard() {
     }
     if (!res.ok) {
       setSaveMsg(data.error || "Save failed");
+      if (res.status === 400 || res.status === 401) {
+        await load();
+      }
       return;
     }
     setSettings(data.settings);
@@ -509,7 +513,7 @@ export function AdminDashboard() {
   ) {
     return buildDateScheduleWindow(
       next.maxAdvanceDays,
-      next.minLeadDays,
+      0,
       next.dateSchedule,
     );
   }
@@ -1267,6 +1271,11 @@ export function AdminDashboard() {
             message={saveMsg}
             onSave={() => saveSettings()}
           />
+          <p className="mt-4 text-xs text-[var(--muted)]">
+            After changing times, click <strong>Save schedule</strong>. Dates
+            within {SCHEDULE_ADJUSTMENT_LEAD_DAYS} days are locked on the booking
+            site — set slots for dates from {getScheduleEditCutoffDate()} onward.
+          </p>
         </div>
       )}
 

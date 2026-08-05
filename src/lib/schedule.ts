@@ -75,6 +75,24 @@ export function getSlotsForDateRow(
   return exact.slots;
 }
 
+/** Read slots for a date directly from persisted schedule JSON (source of truth). */
+export function getSlotsForSavedDate(
+  saved: DateScheduleRow[],
+  date: string,
+): string[] {
+  const exact = saved.find((row) => row.date === date);
+  if (!exact || !exact.enabled) return [];
+  return (exact.slots ?? []).filter((slot) => /^\d{2}:\d{2}$/.test(slot));
+}
+
+export function isDateClosedInSaved(
+  saved: DateScheduleRow[],
+  date: string,
+): boolean {
+  const exact = saved.find((row) => row.date === date);
+  return !exact || !exact.enabled;
+}
+
 export function isDateClosedInSchedule(
   schedule: DateScheduleRow[],
   date: string,

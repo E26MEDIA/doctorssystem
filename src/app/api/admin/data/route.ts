@@ -194,9 +194,15 @@ export async function PUT(request: Request) {
       };
     });
 
+    const windowDates = new Set(dateSchedule.map((row) => row.date));
+    const preserved = existingSaved.filter((row) => !windowDates.has(row.date));
+    const mergedSchedule = [...preserved, ...dateSchedule].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+
     const minLeadDays = Math.max(SCHEDULE_ADJUSTMENT_LEAD_DAYS, s.minLeadDays);
     const uniqueSlots = Array.from(
-      new Set(dateSchedule.flatMap((row) => (row.enabled ? row.slots : []))),
+      new Set(mergedSchedule.flatMap((row) => (row.enabled ? row.slots : []))),
     ).sort();
 
     const row = await prisma.clinicSettings.update({
@@ -217,7 +223,7 @@ export async function PUT(request: Request) {
           uniqueSlots.length ? uniqueSlots : s.timeSlots,
         ),
         weeklyScheduleJson: JSON.stringify(s.weeklySchedule ?? []),
-        dateScheduleJson: JSON.stringify(dateSchedule),
+        dateScheduleJson: JSON.stringify(mergedSchedule),
         bookingEnabled: s.bookingEnabled,
         minLeadDays,
         maxAdvanceDays: s.maxAdvanceDays,
@@ -231,10 +237,10 @@ export async function PUT(request: Request) {
     });
 
     // Keep BlockedDate table in sync with Off days in the schedule (one source of truth in UI)
-    const offDates = dateSchedule
+    const offDates = mergedSchedule
       .filter((row) => !row.enabled)
       .map((row) => row.date);
-    const openDates = dateSchedule
+    const openDates = mergedSchedule
       .filter((row) => row.enabled)
       .map((row) => row.date);
 

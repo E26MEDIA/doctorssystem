@@ -10,7 +10,10 @@ import {
   buildDateScheduleWindow,
   formatScheduleLabel,
   getSlotsForDateRow,
+  getSlotsForSavedDate,
   isDateClosedInSchedule,
+  isDateClosedInSaved,
+  SCHEDULE_ADJUSTMENT_LEAD_DAYS,
   type DateScheduleRow,
 } from "@/lib/schedule";
 
@@ -26,10 +29,12 @@ export {
   buildDateScheduleWindow,
   formatScheduleLabel,
   isDateClosedInSchedule,
+  isDateClosedInSaved,
   isScheduleDateEditable,
   SCHEDULE_ADJUSTMENT_LEAD_DAYS,
   getScheduleEditCutoffDate,
   scheduleRowsEqual,
+  getSlotsForSavedDate,
 };
 
 export type ClinicConfig = {
@@ -44,6 +49,8 @@ export type ClinicConfig = {
   social: { instagram: string; linkedin: string };
   timeSlots: string[];
   weeklySchedule: WeeklyScheduleRow[];
+  /** Raw schedule rows persisted in the database. */
+  savedDateSchedule: DateScheduleRow[];
   dateSchedule: DateScheduleRow[];
   bookingEnabled: boolean;
   minLeadDays: number;
@@ -114,6 +121,7 @@ export function defaultsConfig(): ClinicConfig {
       slots: [...row.slots],
     })),
     dateSchedule: buildDateScheduleWindow(60, 7, [], { fillDefaults: true }),
+    savedDateSchedule: buildDateScheduleWindow(60, 7, [], { fillDefaults: true }),
     bookingEnabled: true,
     minLeadDays: 7,
     maxAdvanceDays: 60,
@@ -252,13 +260,19 @@ export function rowToConfig(
     },
     timeSlots: parseJson<string[]>(row.timeSlotsJson, [...defaultTimeSlots]),
     weeklySchedule,
+    savedDateSchedule: savedDates.map((row) => ({
+      date: row.date,
+      label: row.label || formatScheduleLabel(row.date),
+      enabled: Boolean(row.enabled),
+      slots: (row.slots ?? []).filter((slot) => /^\d{2}:\d{2}$/.test(slot)),
+    })),
     dateSchedule: buildDateScheduleWindow(
       row.maxAdvanceDays,
-      row.minLeadDays,
+      0,
       savedDates,
     ),
     bookingEnabled: row.bookingEnabled,
-    minLeadDays: row.minLeadDays,
+    minLeadDays: Math.max(SCHEDULE_ADJUSTMENT_LEAD_DAYS, row.minLeadDays),
     maxAdvanceDays: row.maxAdvanceDays,
     autoConfirm: row.autoConfirm,
     confirmationNote: row.confirmationNote,
@@ -269,13 +283,13 @@ export function rowToConfig(
   };
 }
 
-/** Bookable times for one calendar date — date schedule only, no weekday template. */
+/** Bookable times for one calendar date — reads persisted schedule JSON first. */
 export function getSlotsForDate(config: ClinicConfig, date: string): string[] {
-  return getSlotsForDateRow(config.dateSchedule, date);
+  return getSlotsForSavedDate(config.savedDateSchedule, date);
 }
 
 export function isClinicClosedOn(config: ClinicConfig, date: string): boolean {
-  return isDateClosedInSchedule(config.dateSchedule, date);
+  return isDateClosedInSaved(config.savedDateSchedule, date);
 }
 
 export async function getClinicConfig(): Promise<ClinicConfig> {
