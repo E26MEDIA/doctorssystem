@@ -92,3 +92,19 @@ model AdminAccount {
   passwordHash String?
   updatedAt    DateTime @updatedAt
 }
+
+model JournalArticle {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  category    String
+  excerpt     String
+  bodyJson    String
+  imageUrl    String   @default("/images/gallery-1.jpg")
+  publishedAt String
+  readTime    String   @default("5 min")
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

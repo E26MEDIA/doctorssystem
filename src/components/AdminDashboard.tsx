@@ -5,6 +5,7 @@ import type {
   ClinicConfig,
   DateScheduleRow,
   HourRow,
+  JournalArticleItem,
   ServiceItem,
 } from "@/lib/settings";
 import {
@@ -47,9 +48,23 @@ type Tab =
   | "profile"
   | "hours"
   | "services"
+  | "journal"
   | "booking"
   | "notifications"
   | "security";
+
+const emptyJournalDraft = (): JournalArticleItem => ({
+  slug: "",
+  title: "",
+  category: "Guidance",
+  excerpt: "",
+  body: [""],
+  imageUrl: "/images/gallery-1.jpg",
+  publishedAt: new Date().toISOString().slice(0, 10),
+  readTime: "5 min",
+  active: true,
+  sortOrder: 0,
+});
 
 const emptySettings = (): ClinicConfig => ({
   name: "",
@@ -334,6 +349,7 @@ export function AdminDashboard() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<ClinicConfig>(emptySettings);
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [journal, setJournal] = useState<JournalArticleItem[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -348,6 +364,10 @@ export function AdminDashboard() {
     sortOrder: 0,
   });
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+
+  const [journalDraft, setJournalDraft] =
+    useState<JournalArticleItem>(emptyJournalDraft);
+  const [editingJournalId, setEditingJournalId] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -371,6 +391,7 @@ export function AdminDashboard() {
     setMessages(data.messages ?? []);
     setSettings(data.settings ?? emptySettings());
     setServices(data.services ?? []);
+    setJournal(data.journal ?? []);
     setAuthed(true);
     setChecking(false);
   }, []);
@@ -508,6 +529,56 @@ export function AdminDashboard() {
     await load();
   }
 
+  async function saveJournal(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setSaveMsg("");
+    const payload = {
+      ...journalDraft,
+      slug: journalDraft.slug || slugify(journalDraft.title),
+      body: journalDraft.body.map((p) => p.trim()).filter(Boolean),
+    };
+    if (payload.body.length === 0) {
+      setSaving(false);
+      setSaveMsg("Add at least one body paragraph");
+      return;
+    }
+    const res = await adminFetch(
+      editingJournalId
+        ? `/api/admin/journal/${editingJournalId}`
+        : "/api/admin/journal",
+      {
+        method: editingJournalId ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+    setSaving(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setSaveMsg(data.error || "Could not save article");
+      return;
+    }
+    setJournalDraft(emptyJournalDraft());
+    setEditingJournalId(null);
+    setSaveMsg(editingJournalId ? "Article updated" : "Article added");
+    await load();
+  }
+
+  function editJournal(article: JournalArticleItem) {
+    setEditingJournalId(article.id ?? null);
+    setJournalDraft({
+      ...article,
+      body: article.body.length ? [...article.body] : [""],
+    });
+    setTab("journal");
+  }
+
+  async function deleteJournal(id: string) {
+    if (!confirm("Delete this journal article?")) return;
+    await adminFetch(`/api/admin/journal/${id}`, { method: "DELETE" });
+    await load();
+  }
+
   function rebuildScheduleWindow(
     next: Pick<ClinicConfig, "minLeadDays" | "maxAdvanceDays" | "dateSchedule">,
   ) {
@@ -617,6 +688,9 @@ export function AdminDashboard() {
         </TabButton>
         <TabButton active={tab === "services"} onClick={() => setTab("services")}>
           Services
+        </TabButton>
+        <TabButton active={tab === "journal"} onClick={() => setTab("journal")}>
+          Journal ({journal.length})
         </TabButton>
         <TabButton active={tab === "booking"} onClick={() => setTab("booking")}>
           Schedule
@@ -1141,6 +1215,229 @@ export function AdminDashboard() {
                     type="button"
                     className="btn-ghost !py-2 !text-red-700"
                     onClick={() => s.id && deleteService(s.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "journal" && (
+        <div className="mt-8 space-y-6">
+          <form
+            onSubmit={saveJournal}
+            className="rounded-2xl border border-[var(--line)] bg-white p-6 md:p-8"
+          >
+            <h2 className="display text-3xl">
+              {editingJournalId ? "Edit article" : "Add journal article"}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Cards on the website show the preview image, title, and excerpt.
+              Use site paths like /images/gallery-1.jpg for images already on
+              the site.
+            </p>
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <label className="field">
+                <span>Title</span>
+                <input
+                  required
+                  value={journalDraft.title}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      title: e.target.value,
+                      slug: editingJournalId
+                        ? journalDraft.slug
+                        : slugify(e.target.value),
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Slug</span>
+                <input
+                  required
+                  value={journalDraft.slug}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      slug: slugify(e.target.value),
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Category</span>
+                <input
+                  required
+                  value={journalDraft.category}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      category: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Read time</span>
+                <input
+                  required
+                  value={journalDraft.readTime}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      readTime: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Published date</span>
+                <input
+                  required
+                  type="date"
+                  value={journalDraft.publishedAt}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      publishedAt: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Sort order</span>
+                <input
+                  type="number"
+                  value={journalDraft.sortOrder}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      sortOrder: Number(e.target.value) || 0,
+                    })
+                  }
+                />
+              </label>
+              <label className="field md:col-span-2">
+                <span>Preview image URL</span>
+                <input
+                  required
+                  value={journalDraft.imageUrl}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      imageUrl: e.target.value,
+                    })
+                  }
+                  placeholder="/images/gallery-1.jpg"
+                />
+              </label>
+              <label className="field md:col-span-2">
+                <span>Excerpt (card preview text)</span>
+                <textarea
+                  required
+                  rows={2}
+                  value={journalDraft.excerpt}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      excerpt: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="field md:col-span-2">
+                <span>Article body (one paragraph per line break block)</span>
+                <textarea
+                  required
+                  rows={8}
+                  value={journalDraft.body.join("\n\n")}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      body: e.target.value.split(/\n\n+/),
+                    })
+                  }
+                />
+              </label>
+              <label className="flex items-center gap-3 text-sm text-[var(--ink-soft)]">
+                <input
+                  type="checkbox"
+                  checked={journalDraft.active}
+                  onChange={(e) =>
+                    setJournalDraft({
+                      ...journalDraft,
+                      active: e.target.checked,
+                    })
+                  }
+                />
+                Active (visible on website)
+              </label>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {editingJournalId ? "Update article" : "Add article"}
+              </button>
+              {editingJournalId && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => {
+                    setEditingJournalId(null);
+                    setJournalDraft(emptyJournalDraft());
+                  }}
+                >
+                  Cancel edit
+                </button>
+              )}
+              {saveMsg && (
+                <p className="self-center text-sm text-[var(--teal)]">{saveMsg}</p>
+              )}
+            </div>
+          </form>
+
+          <div className="space-y-3">
+            {journal.map((article) => (
+              <div
+                key={article.id ?? article.slug}
+                className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--line)] bg-white p-5"
+              >
+                <div className="flex min-w-0 flex-1 gap-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={article.imageUrl}
+                    alt=""
+                    className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-medium text-[var(--deep)]">
+                      {article.title}{" "}
+                      <span className="text-xs text-[var(--muted)]">
+                        ({article.active ? "active" : "hidden"}) ·{" "}
+                        {article.category}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                      {article.excerpt}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-ghost !py-2"
+                    onClick={() => editJournal(article)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost !py-2 !text-red-700"
+                    onClick={() => article.id && deleteJournal(article.id)}
                   >
                     Delete
                   </button>

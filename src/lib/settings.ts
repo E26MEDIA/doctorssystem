@@ -231,6 +231,7 @@ export async function ensureAllSettings() {
     ensureClinicSettings(),
     ensureServices(),
     ensureAdminAccount(),
+    ensureJournalArticles(),
   ]);
 }
 
@@ -332,6 +333,96 @@ export async function getAllServices(): Promise<ServiceItem[]> {
 
 export async function getBlockedDates() {
   return prisma.blockedDate.findMany({ orderBy: { date: "asc" } });
+}
+
+export type JournalArticleItem = {
+  id?: string;
+  slug: string;
+  title: string;
+  category: string;
+  excerpt: string;
+  body: string[];
+  imageUrl: string;
+  publishedAt: string;
+  readTime: string;
+  active: boolean;
+  sortOrder: number;
+};
+
+function parseBodyJson(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (Array.isArray(parsed)) {
+      return parsed.filter((p): p is string => typeof p === "string" && p.trim().length > 0);
+    }
+  } catch {
+    /* ignore */
+  }
+  return value
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+export async function ensureJournalArticles() {
+  for (const [i, article] of articles.entries()) {
+    await prisma.journalArticle.upsert({
+      where: { slug: article.slug },
+      update: {},
+      create: {
+        slug: article.slug,
+        title: article.title,
+        category: article.category,
+        excerpt: article.excerpt,
+        bodyJson: JSON.stringify([...article.body]),
+        imageUrl: article.imageUrl,
+        publishedAt: article.publishedAt,
+        readTime: article.readTime,
+        active: true,
+        sortOrder: i,
+      },
+    });
+  }
+  return prisma.journalArticle.findMany({
+    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+  });
+}
+
+function mapJournalRow(
+  row: Awaited<ReturnType<typeof ensureJournalArticles>>[number],
+): JournalArticleItem {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    category: row.category,
+    excerpt: row.excerpt,
+    body: parseBodyJson(row.bodyJson),
+    imageUrl: row.imageUrl || "/images/gallery-1.jpg",
+    publishedAt: row.publishedAt,
+    readTime: row.readTime,
+    active: row.active,
+    sortOrder: row.sortOrder,
+  };
+}
+
+export async function getActiveJournalArticles(): Promise<JournalArticleItem[]> {
+  const rows = await ensureJournalArticles();
+  return rows.filter((r) => r.active).map(mapJournalRow);
+}
+
+export async function getAllJournalArticles(): Promise<JournalArticleItem[]> {
+  const rows = await ensureJournalArticles();
+  return rows.map(mapJournalRow);
+}
+
+export async function getJournalArticleBySlug(
+  slug: string,
+): Promise<JournalArticleItem | null> {
+  await ensureJournalArticles();
+  const row = await prisma.journalArticle.findUnique({ where: { slug } });
+  if (!row || !row.active) return null;
+  return mapJournalRow(row);
 }
 
 export { testimonials, articles };

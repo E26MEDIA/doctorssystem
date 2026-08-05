@@ -25,11 +25,19 @@ export default async function ContactPage() {
             Reach {clinic.doctor.replace(/^Dr\.\s*/, "Dr. ")}&apos;s team
           </h1>
           <p className="mt-5 max-w-md text-lg text-[var(--ink-soft)]">
-            For appointments, use{" "}
-            <a href="/#book" className="font-medium text-[var(--teal)] underline-offset-4 hover:underline">
-              Book
-            </a>
-            . For general questions, send a message below.
+            This form is for{" "}
+            <strong className="font-medium text-[var(--ink)]">
+              general questions
+            </strong>{" "}
+            — reports, directions, or anything that is not an appointment. To
+            reserve a clinic or virtual slot, use{" "}
+            <a
+              href="/#book"
+              className="font-medium text-[var(--teal)] underline-offset-4 hover:underline"
+            >
+              Book consultation
+            </a>{" "}
+            and choose your visit type there.
           </p>
           <div className="mt-10 space-y-5 text-sm text-[var(--ink-soft)]">
             <div>

@@ -3,13 +3,18 @@ import Link from "next/link";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { GallerySection } from "@/components/GallerySection";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
-import { articles, doctorProfile } from "@/lib/clinic";
-import { getActiveServices, getClinicConfig } from "@/lib/settings";
+import { doctorProfile } from "@/lib/clinic";
+import {
+  getActiveJournalArticles,
+  getActiveServices,
+  getClinicConfig,
+} from "@/lib/settings";
 
 export default async function HomePage() {
-  const [clinic, services] = await Promise.all([
+  const [clinic, services, articles] = await Promise.all([
     getClinicConfig(),
     getActiveServices(),
+    getActiveJournalArticles(),
   ]);
 
   const consultServices = services.filter((s) =>
@@ -173,27 +178,35 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {articles.map((article) => (
-              <article
+            {articles.slice(0, 3).map((article) => (
+              <Link
                 key={article.slug}
-                className="rounded-[1.25rem] border border-[var(--line)] bg-white/90 p-6"
+                href={`/journal/${article.slug}`}
+                className="group overflow-hidden rounded-[1.25rem] border border-[var(--line)] bg-white/90 transition hover:border-[var(--teal)]/40"
               >
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
-                  {article.category}
-                </p>
-                <h3 className="display mt-2 text-2xl text-[var(--deep)]">
-                  {article.title}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">
-                  {article.excerpt}
-                </p>
-                <Link
-                  href={`/journal/${article.slug}`}
-                  className="mt-5 inline-flex text-sm font-medium text-[var(--teal)] underline-offset-4 hover:underline"
-                >
-                  Read article
-                </Link>
-              </article>
+                <div className="relative aspect-[16/10] overflow-hidden bg-[var(--sand)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={article.imageUrl}
+                    alt=""
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                </div>
+                <div className="p-6">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--teal)]">
+                    {article.category}
+                  </p>
+                  <h3 className="display mt-2 text-2xl text-[var(--deep)]">
+                    {article.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">
+                    {article.excerpt}
+                  </p>
+                  <span className="mt-5 inline-flex text-sm font-medium text-[var(--teal)]">
+                    Read article →
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

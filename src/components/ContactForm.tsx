@@ -43,6 +43,10 @@ export function ContactForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
+      <p className="text-sm text-[var(--ink-soft)]">
+        Ask a general question — this is not for booking. To reserve a clinic or
+        virtual slot, use Book consultation on Services or the home page.
+      </p>
       <div className="grid gap-5 md:grid-cols-2">
         <label className="field">
           <span>Name</span>

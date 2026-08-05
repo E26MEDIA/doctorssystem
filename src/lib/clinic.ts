@@ -163,6 +163,7 @@ export const articles = [
       "Gallbladder pain, hernias, unexplained weight loss, and other signs that deserve specialist review.",
     publishedAt: "2026-05-10",
     readTime: "5 min",
+    imageUrl: "/images/gallery-3.jpg",
     body: [
       "Persistent upper abdominal pain after meals, a noticeable hernia bulge, unexplained weight loss, or jaundice should not be ignored. These can point to gallbladder disease, colorectal issues, or hepato-pancreato-biliary conditions that benefit from specialist review.",
       "A surgical gastroenterologist evaluates whether medical management is enough or whether laparoscopic or open surgery is the safer path. Bring prior reports, imaging CDs, and a medication list to your first visit — clinic or virtual.",
@@ -177,6 +178,7 @@ export const articles = [
       "What the first two weeks usually look like — walking, diet, wound care, and when to call.",
     publishedAt: "2026-04-02",
     readTime: "6 min",
+    imageUrl: "/images/gallery-1.jpg",
     body: [
       "Most patients walk the same day or next morning after laparoscopic GI surgery. Short walks reduce clotting risk and help the gut wake up. Rest when tired, but avoid long bed rest.",
       "Diet usually starts light — clear fluids, then soft foods — as advised for your specific procedure. Wound sites should stay clean and dry; mild bruising around ports is common.",
@@ -191,6 +193,7 @@ export const articles = [
       "A simple guide to choosing the right consultation type for your reports and symptoms.",
     publishedAt: "2026-03-18",
     readTime: "4 min",
+    imageUrl: "/images/virtual.jpg",
     body: [
       "Choose a virtual consultation when you need report review, a second opinion, post-op check-in, or counselling that does not require a physical exam. After you reserve a slot, complete checkout to receive your Google Meet link and payment receipt by email.",
       "Choose a clinic consultation for new abdominal findings, hernia assessment, pre-operative planning that needs examination, or when dressing changes and in-person counselling matter.",

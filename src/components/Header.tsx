@@ -116,14 +116,6 @@ export function Header({ brand }: { brand: Brand }) {
               </Link>
             );
           })}
-          <Link
-            href="/#book"
-            className={`btn-primary !px-5 !py-2.5 text-sm ${
-              solid ? "" : "!bg-[var(--teal-bright)] !text-[var(--deep)]"
-            }`}
-          >
-            Book visit
-          </Link>
         </nav>
 
         <button
@@ -165,8 +157,8 @@ export function Header({ brand }: { brand: Brand }) {
               {link.label}
             </Link>
           ))}
-          <Link href="/#book" className="btn-primary mt-2 text-center">
-            Book visit
+          <Link href="/services" className="btn-primary mt-2 text-center">
+            View services
           </Link>
         </nav>
       </div>

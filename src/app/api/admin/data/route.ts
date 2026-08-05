@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   ensureAllSettings,
   ensureClinicSettings,
+  getAllJournalArticles,
   getAllServices,
   getBlockedDates,
   rowToConfig,
@@ -28,7 +29,7 @@ export async function GET() {
 
   await ensureAllSettings();
 
-  const [appointments, messages, settingsRow, services, blockedDates] =
+  const [appointments, messages, settingsRow, services, blockedDates, journal] =
     await Promise.all([
       prisma.appointment.findMany({
         orderBy: [{ date: "asc" }, { time: "asc" }],
@@ -37,6 +38,7 @@ export async function GET() {
       ensureClinicSettings(),
       getAllServices(),
       getBlockedDates(),
+      getAllJournalArticles(),
     ]);
 
   const settings = rowToConfig(settingsRow);
@@ -52,6 +54,7 @@ export async function GET() {
     settings,
     services,
     blockedDates,
+    journal,
   });
 }
 
