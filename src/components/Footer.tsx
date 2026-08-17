@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ClinicConfig } from "@/lib/settings";
-import { whatsappHref, youtubeChannel } from "@/lib/clinic";
+import { clinic as clinicInfo, whatsappHref, youtubeChannel } from "@/lib/clinic";
 
 export function Footer({ clinic }: { clinic: ClinicConfig }) {
   return (
@@ -10,7 +10,7 @@ export function Footer({ clinic }: { clinic: ClinicConfig }) {
           <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--teal-bright)]">
             Surgical gastroenterology
           </p>
-          <h3 className="display mt-3 text-2xl text-white">{clinic.doctor}</h3>
+          <h3 className="display mt-3 text-2xl text-white">{clinicInfo.doctor}</h3>
           <p className="mt-3 max-w-[34ch] text-sm leading-relaxed text-white/65">
             {clinic.tagline}
           </p>
@@ -108,7 +108,7 @@ export function Footer({ clinic }: { clinic: ClinicConfig }) {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between md:px-8">
           <span>
-            © {new Date().getFullYear()} {clinic.doctor}. All rights reserved.
+            © {new Date().getFullYear()} {clinicInfo.doctor}. All rights reserved.
           </span>
           <span>Clinic · Virtual · Instant slot confirmation</span>
         </div>

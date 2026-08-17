@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { YoutubeSection } from "@/components/YoutubeSection";
-import { doctorProfile, youtubeChannel } from "@/lib/clinic";
+import { clinic as clinicInfo, doctorProfile, youtubeChannel } from "@/lib/clinic";
 import { getClinicConfig } from "@/lib/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const clinic = await getClinicConfig();
   return {
     title: "About",
-    description: `Meet ${clinic.doctor}, Surgical Gastroenterologist.`,
+    description: `Meet ${clinicInfo.doctor}, Surgical Gastroenterologist.`,
   };
 }
 
@@ -23,7 +22,7 @@ export default async function AboutPage() {
           About
         </p>
         <h1 className="display mt-3 max-w-3xl text-5xl md:text-6xl">
-          {clinic.doctor}
+          {clinicInfo.doctor}
         </h1>
         <div className="mt-4 max-w-2xl space-y-1 text-lg text-[var(--ink-soft)]">
           {doctorProfile.intro.map((line) => (
@@ -36,7 +35,7 @@ export default async function AboutPage() {
         <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
           <Image
             src={doctorProfile.portrait}
-            alt={clinic.doctor}
+            alt={clinicInfo.doctor}
             fill
             className="object-cover object-top"
             sizes="(max-width: 768px) 100vw, 50vw"

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { GallerySection } from "@/components/GallerySection";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
-import { doctorProfile, whatsappHref } from "@/lib/clinic";
+import { clinic as clinicInfo, doctorProfile, whatsappHref } from "@/lib/clinic";
 import {
   getActiveJournalArticles,
   getActiveServices,
@@ -41,7 +41,7 @@ export default async function HomePage() {
         <div className="relative mx-auto flex min-h-[100svh] max-w-6xl items-end px-5 pb-20 pt-36 md:items-center md:px-8 md:pb-24">
           <div className="hero-copy max-w-2xl text-white">
             <p className="text-sm uppercase tracking-[0.28em] text-[var(--teal-bright)]">
-              {clinic.doctor}
+              {clinicInfo.doctor}
             </p>
             <h1 className="display mt-4 text-5xl text-white md:text-7xl">
               Surgical GI care,
@@ -77,7 +77,7 @@ export default async function HomePage() {
           <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
             <Image
               src={doctorProfile.portrait}
-              alt={clinic.doctor}
+              alt={clinicInfo.doctor}
               fill
               className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -88,7 +88,7 @@ export default async function HomePage() {
             <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
               Physician
             </p>
-            <h2 className="display mt-3 text-4xl md:text-5xl">{clinic.doctor}</h2>
+            <h2 className="display mt-3 text-4xl md:text-5xl">{clinicInfo.doctor}</h2>
             <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {doctorProfile.specialty}
