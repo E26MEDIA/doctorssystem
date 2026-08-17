@@ -196,10 +196,26 @@ export async function ensureClinicSettings() {
   };
 
   // CRITICAL: never overwrite admin-saved settings on every page load
-  return prisma.clinicSettings.upsert({
+  const row = await prisma.clinicSettings.upsert({
     where: { id: "default" },
     update: {},
     create: { id: "default", ...payload },
+  });
+
+  const previousCredentials =
+    "MBBS, MS (General Surgery), Fellowship in Surgical Gastroenterology";
+  const patch: { doctorName?: string; credentials?: string } = {};
+  if (/Sharath/i.test(row.doctorName) && d.doctor !== row.doctorName) {
+    patch.doctorName = d.doctor;
+  }
+  if (row.credentials === previousCredentials && d.credentials !== previousCredentials) {
+    patch.credentials = d.credentials;
+  }
+  if (Object.keys(patch).length === 0) return row;
+
+  return prisma.clinicSettings.update({
+    where: { id: "default" },
+    data: patch,
   });
 }
 

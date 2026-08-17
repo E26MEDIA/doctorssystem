@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
 import { Reveal } from "@/components/Reveal";
+import { whatsappHref, youtubeChannel } from "@/lib/clinic";
 import { getClinicConfig } from "@/lib/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -61,6 +62,17 @@ export default async function ContactPage() {
               </p>
             </div>
             <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">WhatsApp</p>
+              <a
+                href={whatsappHref()}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 block text-base text-[var(--teal)]"
+              >
+                63669 18181
+              </a>
+            </div>
+            <div>
               <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted)]">Online</p>
               <a
                 href={clinic.social.instagram}
@@ -69,6 +81,14 @@ export default async function ContactPage() {
                 className="mt-1 block text-base text-[var(--teal)]"
               >
                 Instagram @dr.honnani
+              </a>
+              <a
+                href={youtubeChannel.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 block text-base text-[var(--teal)]"
+              >
+                YouTube {youtubeChannel.handle}
               </a>
             </div>
           </div>

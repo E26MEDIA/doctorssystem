@@ -1,7 +1,7 @@
 export const clinic = {
   name: "Honnani GI Surgery",
-  doctor: "Dr. Sharath S. Honnani",
-  credentials: "MBBS, MS (General Surgery), Fellowship in Surgical Gastroenterology",
+  doctor: "Dr. S S Honnani",
+  credentials: "MBBS, MS, Fellowship in Gastrointestinal Surgery (RGUHS)",
   tagline: "Advanced laparoscopic & gastrointestinal surgery with clear, confident care.",
   phone: "+91 824 220 4668",
   email: "care@drhonnani.com",
@@ -16,23 +16,41 @@ export const clinic = {
   social: {
     instagram: "https://www.instagram.com/dr.honnani/",
     linkedin: "https://www.yenepoyahospital.com/dr-s-s-honnani/",
+    youtube: "https://www.youtube.com/@surgeonhonnani",
+  },
+  whatsapp: {
+    number: "916366918181",
+    display: "63669 18181",
+    message:
+      "Hello Dr. S S Honnani, I would like to enquire about a consultation. Please let me know a convenient time to connect.",
   },
 } as const;
 
+export function whatsappHref() {
+  return `https://wa.me/${clinic.whatsapp.number}?text=${encodeURIComponent(clinic.whatsapp.message)}`;
+}
+
 export const doctorProfile = {
-  shortName: "Dr. Honnani",
-  role: "Visiting Consultant Surgical Gastroenterologist",
+  shortName: "Dr. S S Honnani",
+  role: "Consultant Surgical Gastroenterologist",
+  specialty: "Advanced Laparoscopic & Bariatric surgeon",
+  intro: [
+    "MBBS, MS, Fellowship in Gastrointestinal Surgery (RGUHS)",
+    "Consultant Surgical Gastroenterologist",
+    "Advanced Laparoscopic & Bariatric surgeon",
+  ],
   hospital: "Yenepoya Specialty Hospital",
+  portrait: "/images/gallery-4.jpg",
   bio: [
-    "Dr. Sharath S. Honnani is a Surgical Gastroenterologist experienced in advanced laparoscopic colorectal, bariatric, and hepato-pancreato-biliary surgery.",
+    "Dr. S S Honnani is a Surgical Gastroenterologist experienced in advanced laparoscopic colorectal, bariatric, and hepato-pancreato-biliary surgery.",
     "He worked with KMC Manipal for six years in Gastrointestinal and General Surgery, later joined BGS Gleneagles Global Hospitals, Bengaluru, and has been associated with Yenepoya Specialty Hospital since June 2019.",
   ],
   education: [
     { title: "MBBS", detail: "Bachelor of Medicine & Bachelor of Surgery" },
     { title: "MS (General Surgery)", detail: "Postgraduate surgical training" },
     {
-      title: "Fellowship in Surgical Gastroenterology",
-      detail: "Advanced GI & HPB surgical fellowship",
+      title: "Fellowship in Gastrointestinal Surgery (RGUHS)",
+      detail: "Advanced GI surgical fellowship, Rajiv Gandhi University of Health Sciences",
     },
   ],
   experience: [
@@ -181,7 +199,7 @@ export const articles = [
       {
         type: "image" as const,
         src: "/images/doctor.jpg",
-        caption: "Dr. Honnani reviews history, reports, and next steps with patients",
+        caption: "Dr. S S Honnani reviews history, reports, and next steps with patients",
       },
       {
         type: "paragraph" as const,
@@ -262,9 +280,14 @@ export const articles = [
 /** Practice photos + Instagram reels from @dr.honnani / @dr_honnani */
 export const galleryPhotos = [
   {
+    src: "/images/gallery-4.jpg",
+    alt: "Dr. S S Honnani",
+    caption: "Dr. S S Honnani",
+  },
+  {
     src: "/images/gallery-2.jpg",
-    alt: "Dr. Sharath S. Honnani",
-    caption: "Dr. Sharath S. Honnani",
+    alt: "Surgical team in theatre",
+    caption: "Surgical team",
   },
   {
     src: "/images/gallery-1.jpg",
@@ -273,35 +296,36 @@ export const galleryPhotos = [
   },
   {
     src: "/images/gallery-3.jpg",
-    alt: "Clinic consultation setting",
-    caption: "Clinic consultation",
+    alt: "Advanced operating theatre",
+    caption: "Operating theatre",
   },
   {
-    src: "/images/gallery-4.jpg",
-    alt: "Virtual consultation",
-    caption: "Virtual care",
+    src: "/images/clinic.jpg",
+    alt: "Hospital operating theatre",
+    caption: "Hospital theatre",
   },
   {
-    src: "/images/gallery-5.jpg",
-    alt: "Hospital corridor light",
-    caption: "Hospital care",
-  },
-  {
-    src: "/images/gallery-6.jpg",
-    alt: "Clinical detail",
-    caption: "Precision work",
-  },
-  {
-    src: "/images/gallery-7.jpg",
-    alt: "Care team atmosphere",
-    caption: "Patient-first setting",
-  },
-  {
-    src: "/images/gallery-8.jpg",
-    alt: "Quiet recovery space",
-    caption: "Recovery focus",
+    src: "/images/hero.jpg",
+    alt: "Surgical suite",
+    caption: "Surgical suite",
   },
 ] as const;
+
+export const youtubeChannel = {
+  handle: "@surgeonhonnani",
+  url: "https://www.youtube.com/@surgeonhonnani",
+  channelId: "UCZeVrLegMV-8decAMKX_hKQ",
+  featured: [
+    {
+      id: "cDjB8pkSU6Y",
+      title: "Fissure in Ano | Dr. S S Honnani",
+    },
+    {
+      id: "Iei8ewDFIGg",
+      title: "Pilonidal Sinus: Causes, Symptoms, and Treatment Options",
+    },
+  ],
+} as const;
 
 /**
  * Local reel videos for the Kalki-style coverflow carousel.
@@ -317,7 +341,7 @@ export const localReels: ReadonlyArray<{
     id: "reel-01",
     src: "/videos/reels/reel-01.mp4",
     title: "Clinical reel 1",
-    caption: "From Dr. Honnani — surgical gastroenterology insights.",
+    caption: "From Dr. S S Honnani — surgical gastroenterology insights.",
   },
   {
     id: "reel-02",

@@ -6,7 +6,7 @@ import { instagramProfile } from "@/lib/clinic";
 export const metadata: Metadata = {
   title: "Gallery",
   description:
-    "Photos and Instagram reels from Dr. Sharath S. Honnani’s surgical practice.",
+    "Photos and Instagram reels from Dr. S S Honnani’s surgical practice.",
 };
 
 export default function GalleryPage() {

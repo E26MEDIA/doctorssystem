@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ClinicConfig } from "@/lib/settings";
+import { whatsappHref, youtubeChannel } from "@/lib/clinic";
 
 export function Footer({ clinic }: { clinic: ClinicConfig }) {
   return (
@@ -47,6 +48,24 @@ export function Footer({ clinic }: { clinic: ClinicConfig }) {
               className="hover:text-[var(--teal-bright)]"
             >
               Instagram @dr.honnani
+            </a>
+            <br />
+            <a
+              href={youtubeChannel.url}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--teal-bright)]"
+            >
+              YouTube {youtubeChannel.handle}
+            </a>
+            <br />
+            <a
+              href={whatsappHref()}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--teal-bright)]"
+            >
+              WhatsApp query
             </a>
             <br />
             <a

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Sora } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getClinicConfig } from "@/lib/settings";
 import "./globals.css";
 
@@ -48,6 +49,7 @@ export default async function RootLayout({
         <Header brand={{ name: clinic.name, doctor: clinic.doctor }} />
         <main className="flex-1">{children}</main>
         <Footer clinic={clinic} />
+        <WhatsAppButton />
       </body>
     </html>
   );

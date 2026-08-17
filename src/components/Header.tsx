@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { clinic } from "@/lib/clinic";
 
 type Brand = { name: string; doctor: string };
 
@@ -15,7 +16,7 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-export function Header({ brand }: { brand: Brand }) {
+export function Header(_props: { brand: Brand }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [overHero, setOverHero] = useState(pathname === "/");
@@ -84,7 +85,7 @@ export function Header({ brand }: { brand: Brand }) {
                 : "text-white group-hover:text-[var(--teal-bright)]"
             }`}
           >
-            {brand.doctor.replace(/^Dr\.\s*/, "Dr. ")}
+            {clinic.doctor}
           </span>
           <span
             className={`mt-1 text-[11px] uppercase tracking-[0.18em] ${

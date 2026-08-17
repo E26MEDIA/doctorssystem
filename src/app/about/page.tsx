@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { doctorProfile } from "@/lib/clinic";
+import { YoutubeSection } from "@/components/YoutubeSection";
+import { doctorProfile, youtubeChannel } from "@/lib/clinic";
 import { getClinicConfig } from "@/lib/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,18 +25,20 @@ export default async function AboutPage() {
         <h1 className="display mt-3 max-w-3xl text-5xl md:text-6xl">
           {clinic.doctor}
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-[var(--ink-soft)]">
-          {doctorProfile.role} · {clinic.credentials}
-        </p>
+        <div className="mt-4 max-w-2xl space-y-1 text-lg text-[var(--ink-soft)]">
+          {doctorProfile.intro.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 md:grid-cols-2 md:px-8">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
           <Image
-            src="/images/doctor.jpg"
+            src={doctorProfile.portrait}
             alt={clinic.doctor}
             fill
-            className="object-cover"
+            className="object-cover object-top"
             sizes="(max-width: 768px) 100vw, 50vw"
             priority
           />
@@ -53,6 +56,15 @@ export default async function AboutPage() {
               rel="noreferrer"
             >
               Instagram @dr.honnani
+            </a>{" "}
+            and{" "}
+            <a
+              href={youtubeChannel.url}
+              className="text-[var(--teal)] underline-offset-4 hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              YouTube {youtubeChannel.handle}
             </a>
             .
           </p>
@@ -66,6 +78,8 @@ export default async function AboutPage() {
           </div>
         </div>
       </section>
+
+      <YoutubeSection />
 
       <section className="border-y border-[var(--line)] bg-white/55 section-pad">
         <div className="mx-auto max-w-6xl px-5 md:px-8">

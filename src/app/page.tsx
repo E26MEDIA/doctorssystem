@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { GallerySection } from "@/components/GallerySection";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
-import { doctorProfile } from "@/lib/clinic";
+import { doctorProfile, whatsappHref } from "@/lib/clinic";
 import {
   getActiveJournalArticles,
   getActiveServices,
@@ -48,10 +48,11 @@ export default async function HomePage() {
               <br />
               clearly guided.
             </h1>
-            <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/80">
-              {clinic.credentials}. Visiting Consultant Surgical
-              Gastroenterologist at Yenepoya Specialty Hospital, Mangaluru.
-            </p>
+            <div className="mt-6 max-w-lg space-y-1 text-lg leading-relaxed text-white/80">
+              {doctorProfile.intro.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
                 href="/#book"
@@ -75,10 +76,10 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center md:px-8">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem]">
             <Image
-              src="/images/doctor.jpg"
+              src={doctorProfile.portrait}
               alt={clinic.doctor}
               fill
-              className="object-cover"
+              className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, 50vw"
               priority
             />
@@ -89,6 +90,9 @@ export default async function HomePage() {
             </p>
             <h2 className="display mt-3 text-4xl md:text-5xl">{clinic.doctor}</h2>
             <p className="mt-2 text-[var(--muted)]">{doctorProfile.role}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              {doctorProfile.specialty}
+            </p>
             <p className="mt-6 text-lg leading-relaxed text-[var(--ink-soft)]">
               {doctorProfile.bio[0]}
             </p>
@@ -154,7 +158,7 @@ export default async function HomePage() {
               Full gallery →
             </Link>
           </div>
-          <GallerySection limitPhotos={6} compact showReels />
+          <GallerySection compact showReels />
         </div>
       </section>
 
@@ -277,6 +281,17 @@ export default async function HomePage() {
             <div className="mt-8 space-y-2 text-sm text-[var(--ink-soft)]">
               <p>
                 <span className="text-[var(--muted)]">Phone:</span> {clinic.phone}
+              </p>
+              <p>
+                <span className="text-[var(--muted)]">WhatsApp:</span>{" "}
+                <a
+                  href={whatsappHref()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-[var(--teal)] underline-offset-4 hover:underline"
+                >
+                  63669 18181
+                </a>
               </p>
               <p>
                 <span className="text-[var(--muted)]">Email:</span> {clinic.email}

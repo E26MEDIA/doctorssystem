@@ -1,6 +1,6 @@
-# Dr. Sharath S. Honnani — Surgical Gastroenterology
+# Dr. S S Honnani — Surgical Gastroenterology
 
-Clinic website for **Dr. Sharath S. Honnani** (MBBS, MS, Fellowship in Surgical Gastroenterology), Visiting Consultant at Yenepoya Specialty Hospital, Mangaluru.
+Clinic website for **Dr. S S Honnani** (MBBS, MS, Fellowship in Gastrointestinal Surgery (RGUHS)), Consultant Surgical Gastroenterologist and Advanced Laparoscopic & Bariatric surgeon at Yenepoya Specialty Hospital, Mangaluru.
 
 Built with **Next.js**, **Prisma**, and **PostgreSQL**. Deploy on **Vercel** (site + API + admin in one app).
 
@@ -15,6 +15,7 @@ Built with **Next.js**, **Prisma**, and **PostgreSQL**. Deploy on **Vercel** (si
 
 - Hospital profile: https://www.yenepoyahospital.com/dr-s-s-honnani/
 - Instagram: https://www.instagram.com/dr.honnani/
+- YouTube: https://www.youtube.com/@surgeonhonnani
 
 ## Local setup
 

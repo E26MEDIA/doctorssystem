@@ -21,7 +21,6 @@ export function GallerySection({
 
   return (
     <div>
-      {/* Photos first */}
       <div>
         <div className="mb-6">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--teal)]">
@@ -29,26 +28,22 @@ export function GallerySection({
           </p>
           <h3 className="display mt-2 text-3xl md:text-4xl">Practice gallery</h3>
         </div>
-        <div
-          className={`grid gap-3 ${
-            compact ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"
-          }`}
-        >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {photos.map((photo, i) => (
-            <Reveal key={photo.src} delay={i * 40}>
-              <figure
-                className={`group relative overflow-hidden rounded-[1.1rem] ${
-                  i % 5 === 0 ? "md:row-span-2 aspect-[3/4]" : "aspect-square"
-                }`}
-              >
+            <Reveal
+              key={photo.src}
+              delay={i * 40}
+              className="group relative aspect-[4/5] overflow-hidden rounded-[1.1rem] bg-[var(--sand)]"
+            >
+              <figure className="absolute inset-0">
                 <Image
                   src={photo.src}
                   alt={photo.alt}
                   fill
                   className="object-cover transition duration-700 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 25vw"
+                  sizes="(max-width: 768px) 50vw, 33vw"
                 />
-                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-3 pt-10 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-10 text-xs text-white">
                   {photo.caption}
                 </figcaption>
               </figure>
@@ -64,7 +59,6 @@ export function GallerySection({
         )}
       </div>
 
-      {/* Reels after photos */}
       {showReels && (
         <div className="mt-16">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
