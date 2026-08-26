@@ -15,6 +15,8 @@ import {
   SCHEDULE_ADJUSTMENT_LEAD_DAYS,
   getScheduleEditCutoffDate,
 } from "@/lib/schedule";
+import { PrescriptionEditor } from "@/components/PrescriptionEditor";
+import { doctorProfile } from "@/lib/clinic";
 
 type Appointment = {
   id: string;
@@ -29,6 +31,9 @@ type Appointment = {
   notes: string | null;
   status: string;
   createdAt: string;
+  prescriptionJson?: string | null;
+  prescriptionSentAt?: string | null;
+  prescriptionIssuedAt?: string | null;
 };
 
 type Message = {
@@ -376,6 +381,7 @@ export function AdminDashboard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [securityMsg, setSecurityMsg] = useState("");
+  const [rxAppointment, setRxAppointment] = useState<Appointment | null>(null);
 
   const load = useCallback(async () => {
     const res = await adminFetch("/api/admin/data");
@@ -884,6 +890,12 @@ export function AdminDashboard() {
                         {a.notes}
                       </p>
                     )}
+                    {a.prescriptionJson && (
+                      <p className="mt-2 text-xs font-medium uppercase tracking-wider text-[var(--teal)]">
+                        Rx ready
+                        {a.prescriptionSentAt ? " · emailed" : ""}
+                      </p>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     {a.date}
@@ -910,22 +922,59 @@ export function AdminDashboard() {
                   </td>
                   <td className="px-4 py-4 capitalize">{a.status}</td>
                   <td className="px-4 py-4">
-                    <select
-                      className="rounded-lg border border-[var(--line)] bg-white px-2 py-1"
-                      value={a.status}
-                      onChange={(e) => updateStatus(a.id, e.target.value)}
-                    >
-                      <option value="pending">pending</option>
-                      <option value="confirmed">confirmed</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                    </select>
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className="rounded-lg border border-[var(--line)] bg-white px-2 py-1"
+                        value={a.status}
+                        onChange={(e) => updateStatus(a.id, e.target.value)}
+                      >
+                        <option value="pending">pending</option>
+                        <option value="confirmed">confirmed</option>
+                        <option value="completed">completed</option>
+                        <option value="cancelled">cancelled</option>
+                      </select>
+                      {(a.visitType === "virtual-consultation" ||
+                        a.prescriptionJson) && (
+                        <button
+                          type="button"
+                          onClick={() => setRxAppointment(a)}
+                          className="rounded-lg border border-[var(--teal)]/40 bg-[var(--sand)] px-2 py-1.5 text-left text-xs font-medium text-[var(--deep)] hover:border-[var(--teal)]"
+                        >
+                          {a.prescriptionJson
+                            ? "Edit / send prescription"
+                            : "Write prescription"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {rxAppointment && (
+        <PrescriptionEditor
+          appointment={rxAppointment}
+          doctorName={settings.doctor || doctorProfile.shortName}
+          doctorRole={doctorProfile.role}
+          doctorSpecialty={doctorProfile.specialty}
+          credentials={settings.credentials || doctorProfile.intro[0]}
+          adminFetch={adminFetch}
+          onClose={() => setRxAppointment(null)}
+          onSaved={async () => {
+            await load();
+            const refreshed = await adminFetch("/api/admin/data");
+            if (refreshed.ok) {
+              const data = await refreshed.json();
+              const next = (data.appointments as Appointment[] | undefined)?.find(
+                (row) => row.id === rxAppointment.id,
+              );
+              if (next) setRxAppointment(next);
+            }
+          }}
+        />
       )}
 
       {tab === "messages" && (

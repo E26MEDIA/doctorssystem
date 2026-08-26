@@ -177,3 +177,41 @@ export function buildClinicConfirmEmail(input: {
 
   return { subject, text };
 }
+
+export function buildPrescriptionEmail(input: {
+  patientName: string;
+  doctorName: string;
+  doctorRole: string;
+  date: string;
+  time12: string;
+  prescriptionText: string;
+  prescriptionHtml: string;
+}) {
+  const when = bookingWhen(input.date, input.time12);
+  const subject = `Your prescription from ${input.doctorName} — ${when}`;
+  const text = [
+    `Hi ${input.patientName},`,
+    "",
+    `Please find your prescription from ${input.doctorName} (${input.doctorRole}) after your consultation on ${when}.`,
+    "",
+    "You can save this email or download the prescription from the clinic admin link if provided.",
+    "",
+    "— — — PRESCRIPTION — — —",
+    "",
+    input.prescriptionText,
+    "",
+    "— Honnani GI Surgery",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;color:#10241f;line-height:1.5">
+      <p>Hi ${input.patientName},</p>
+      <p>Please find your prescription from <strong>${input.doctorName}</strong> (${input.doctorRole}) after your consultation on <strong>${when}</strong>.</p>
+      <p style="color:#6b8179;font-size:13px">Keep this email for your records. You may also print or save the attached prescription format below.</p>
+      <hr style="border:none;border-top:1px solid #d5e3dd;margin:24px 0" />
+      ${input.prescriptionHtml}
+    </div>
+  `;
+
+  return { subject, text, html };
+}

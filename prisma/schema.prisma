@@ -24,6 +24,10 @@ model Appointment {
   payToken       String?  @unique
   notes          String?
   status         String   @default("confirmed")
+  /// JSON: diagnosis, medicines[], advice, followUp
+  prescriptionJson     String?
+  prescriptionSentAt   DateTime?
+  prescriptionIssuedAt DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

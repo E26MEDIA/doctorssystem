@@ -41,3 +41,22 @@ export const loginSchema = z.object({
 export const statusSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
 });
+
+export const prescriptionMedicineSchema = z.object({
+  name: z.string().trim().min(1, "Medicine name required").max(120),
+  dosage: z.string().trim().max(80).optional().or(z.literal("")),
+  frequency: z.string().trim().max(80).optional().or(z.literal("")),
+  duration: z.string().trim().max(80).optional().or(z.literal("")),
+  instructions: z.string().trim().max(200).optional().or(z.literal("")),
+});
+
+export const prescriptionSchema = z.object({
+  diagnosis: z.string().trim().min(2, "Enter diagnosis").max(500),
+  medicines: z
+    .array(prescriptionMedicineSchema)
+    .min(1, "Add at least one medicine")
+    .max(20),
+  advice: z.string().trim().max(2000).optional().or(z.literal("")),
+  followUp: z.string().trim().max(500).optional().or(z.literal("")),
+  sendEmail: z.boolean().optional(),
+});
