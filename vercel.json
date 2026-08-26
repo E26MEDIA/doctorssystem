@@ -1,0 +1,4 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "prisma generate && DATABASE_URL=\"file:./prod.db\" prisma db push --skip-generate && next build"
+}

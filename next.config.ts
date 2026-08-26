@@ -7,7 +7,15 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+      },
     ],
+  },
+  // Keep the build-time SQLite file available to serverless functions on Vercel
+  outputFileTracingIncludes: {
+    "/**": ["./prod.db"],
   },
 };
 

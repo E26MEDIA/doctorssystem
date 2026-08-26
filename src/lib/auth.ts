@@ -131,16 +131,21 @@ function envPasswordMatch(password: string) {
 export async function checkAdminPassword(password: string) {
   if (!password || password.length > 72) return false;
 
-  await ensureAdminAccount();
-  const account = await prisma.adminAccount.findUnique({
-    where: { id: "admin" },
-  });
+  try {
+    await ensureAdminAccount();
+    const account = await prisma.adminAccount.findUnique({
+      where: { id: "admin" },
+    });
 
-  if (account?.passwordHash) {
-    return bcrypt.compare(password, account.passwordHash);
+    if (account?.passwordHash) {
+      return bcrypt.compare(password, account.passwordHash);
+    }
+
+    return envPasswordMatch(password);
+  } catch {
+    // On serverless hosts SQLite can fail briefly — still allow the env password.
+    return envPasswordMatch(password);
   }
-
-  return envPasswordMatch(password);
 }
 
 export function validateNewPassword(password: string): string | null {
