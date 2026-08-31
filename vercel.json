@@ -1,4 +1,18 @@
 {
   "framework": "nextjs",
-  "buildCommand": "prisma generate && DATABASE_URL=\"file:./prod.db\" prisma db push --skip-generate && next build"
+  "buildCommand": "prisma generate && DATABASE_URL=\"file:./prod.db\" prisma db push --skip-generate && next build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.drhonnani.com" }],
+      "destination": "https://drhonnani.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "honnani.vercel.app" }],
+      "destination": "https://drhonnani.com/:path*",
+      "permanent": true
+    }
+  ]
 }
